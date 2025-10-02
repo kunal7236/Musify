@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:gradient_widgets/gradient_widgets.dart';
+import 'package:flutter/services.dart';
+// import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:Musify/helper/utils.dart';
 import 'package:Musify/style/appColors.dart';
@@ -22,15 +23,10 @@ class AboutPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          brightness: Brightness.dark,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
           centerTitle: true,
-          title: GradientText(
+          title: Text(
             "About",
-            shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-            gradient: LinearGradient(colors: [
-              Color(0xff4db6ac),
-              Color(0xff61e88a),
-            ]),
             style: TextStyle(
               color: accent,
               fontSize: 25,
@@ -124,7 +120,7 @@ class AboutCards extends StatelessWidget {
                   children: <Widget>[
                     IconButton(
                       icon: Icon(
-                        MdiIcons.telegram,
+                        MdiIcons.send,
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
@@ -181,7 +177,7 @@ class AboutCards extends StatelessWidget {
                   children: <Widget>[
                     IconButton(
                       icon: Icon(
-                        MdiIcons.telegram,
+                        MdiIcons.send,
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
@@ -238,7 +234,7 @@ class AboutCards extends StatelessWidget {
                   children: <Widget>[
                     IconButton(
                       icon: Icon(
-                        MdiIcons.telegram,
+                        MdiIcons.send,
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
@@ -295,7 +291,7 @@ class AboutCards extends StatelessWidget {
                   children: <Widget>[
                     IconButton(
                       icon: Icon(
-                        MdiIcons.telegram,
+                        MdiIcons.send,
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',

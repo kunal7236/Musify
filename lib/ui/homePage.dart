@@ -1,23 +1,23 @@
 import 'dart:io';
-import 'dart:ui';
 
-import 'package:audiotagger/audiotagger.dart';
-import 'package:audiotagger/models/tag.dart';
+// import 'package:audiotagger/audiotagger.dart';  // Removed due to compatibility issues
+// import 'package:audiotagger/models/tag.dart';   // Removed due to compatibility issues
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:ext_storage/ext_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:gradient_widgets/gradient_widgets.dart';
+// import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
 import 'package:http/http.dart' as http;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:Musify/API/saavn.dart';
-import 'package:Musify/music.dart';
+import 'package:Musify/music.dart' as music;
 import 'package:Musify/style/appColors.dart';
 import 'package:Musify/ui/aboutPage.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:progress_dialog/progress_dialog.dart';
 
 class Musify extends StatefulWidget {
   @override
@@ -50,29 +50,55 @@ class AppState extends State<Musify> {
   }
 
   getSongDetails(String id, var context) async {
+    // Show loading indicator
+    EasyLoading.show(status: 'Loading song...');
+
     try {
       await fetchSongDetails(id);
-      print(kUrl);
+      debugPrint('Fetched song details. URL: $kUrl');
+
+      // Check if we got a valid URL
+      if (kUrl.isEmpty || Uri.tryParse(kUrl) == null) {
+        throw Exception('Failed to get valid audio URL');
+      }
+
+      debugPrint('Valid URL obtained: $kUrl');
     } catch (e) {
       artist = "Unknown";
-      print(e);
+      debugPrint('Error fetching song details: $e');
+
+      EasyLoading.dismiss();
+
+      // Show error message to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading song: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return; // Don't navigate to music player if there's an error
     }
+
+    EasyLoading.dismiss();
+
     setState(() {
       checker = "Haa";
     });
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AudioApp(),
+        builder: (context) => music.AudioApp(),
       ),
     );
   }
 
   downloadSong(id) async {
-    String filepath;
-    String filepath2;
+    String? filepath;
+    String? filepath2;
     var status = await Permission.storage.status;
-    if (status.isUndetermined || status.isDenied) {
+    if (status.isDenied || status.isPermanentlyDenied) {
       // code of read or write file in external storage (SD card)
       // You can request multiple permissions at once.
       Map<Permission, PermissionStatus> statuses = await [
@@ -83,35 +109,15 @@ class AppState extends State<Musify> {
     status = await Permission.storage.status;
     await fetchSongDetails(id);
     if (status.isGranted) {
-      ProgressDialog pr = ProgressDialog(context);
-      pr = ProgressDialog(
-        context,
-        type: ProgressDialogType.Normal,
-        isDismissible: false,
-        showLogs: false,
-      );
-
-      pr.style(
-        backgroundColor: Color(0xff263238),
-        elevation: 4,
-        textAlign: TextAlign.left,
-        progressTextStyle: TextStyle(color: Colors.white),
-        message: "Downloading " + title,
-        messageTextStyle: TextStyle(color: accent),
-        progressWidget: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(accent),
-          ),
-        ),
-      );
-      await pr.show();
+      EasyLoading.show(status: 'Downloading $title...');
 
       final filename = title + ".m4a";
       final artname = title + "_artwork.jpg";
       //Directory appDocDir = await getExternalStorageDirectory();
-      String dlPath = await ExtStorage.getExternalStoragePublicDirectory(
-          ExtStorage.DIRECTORY_MUSIC);
+      Directory? musicDir = await getExternalStorageDirectory();
+      String dlPath = "${musicDir?.path}/Music";
+      await Directory(dlPath).create(recursive: true);
+
       await File(dlPath + "/" + filename)
           .create(recursive: true)
           .then((value) => filepath = value.path);
@@ -127,7 +133,7 @@ class AppState extends State<Musify> {
           ..followRedirects = false;
         final response = await client.send(request);
         debugPrint(response.statusCode.toString());
-        kUrl = (response.headers['location']);
+        kUrl = (response.headers['location']) ?? kUrl;
         debugPrint(rawkUrl);
         debugPrint(kUrl);
         final request2 = http.Request('HEAD', Uri.parse(kUrl))
@@ -140,34 +146,36 @@ class AppState extends State<Musify> {
       var request = await HttpClient().getUrl(Uri.parse(kUrl));
       var response = await request.close();
       var bytes = await consolidateHttpClientResponseBytes(response);
-      File file = File(filepath);
+      File file = File(filepath!);
 
       var request2 = await HttpClient().getUrl(Uri.parse(image));
       var response2 = await request2.close();
       var bytes2 = await consolidateHttpClientResponseBytes(response2);
-      File file2 = File(filepath2);
+      File file2 = File(filepath2!);
 
       await file.writeAsBytes(bytes);
       await file2.writeAsBytes(bytes2);
       debugPrint("Started tag editing");
 
-      final tag = Tag(
-        title: title,
-        artist: artist,
-        artwork: filepath2,
-        album: album,
-        lyrics: lyrics,
-        genre: null,
-      );
+      // TODO: Replace with compatible audio tagging library
+      // final tag = Tag(
+      //   title: title,
+      //   artist: artist,
+      //   artwork: filepath2,
+      //   album: album,
+      //   lyrics: lyrics,
+      //   genre: null,
+      // );
 
-      debugPrint("Setting up Tags");
-      final tagger = Audiotagger();
-      await tagger.writeTags(
-        path: filepath,
-        tag: tag,
-      );
+      debugPrint(
+          "Setting up Tags - Temporarily disabled due to compatibility issues");
+      // final tagger = Audiotagger();
+      // await tagger.writeTags(
+      //   path: filepath!,
+      //   tag: tag,
+      // );
       await Future.delayed(const Duration(seconds: 1), () {});
-      await pr.hide();
+      EasyLoading.dismiss();
 
       if (await file2.exists()) {
         await file2.delete();
@@ -217,7 +225,7 @@ class AppState extends State<Musify> {
         ),
       ),
       child: Scaffold(
-        resizeToAvoidBottomPadding: false,
+        resizeToAvoidBottomInset: false,
         backgroundColor: Colors.transparent,
         //backgroundColor: Color(0xff384850),
         bottomNavigationBar: kUrl != ""
@@ -237,7 +245,8 @@ class AppState extends State<Musify> {
                       if (kUrl != "") {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => AudioApp()),
+                          MaterialPageRoute(
+                              builder: (context) => music.AudioApp()),
                         );
                       }
                     },
@@ -290,19 +299,53 @@ class AppState extends State<Musify> {
                         ),
                         Spacer(),
                         IconButton(
-                          icon: playerState == PlayerState.playing
+                          icon: music.playerState == PlayerState.playing
                               ? Icon(MdiIcons.pause)
                               : Icon(MdiIcons.playOutline),
                           color: accent,
                           splashColor: Colors.transparent,
                           onPressed: () {
                             setState(() {
-                              if (playerState == PlayerState.playing) {
-                                audioPlayer.pause();
-                                playerState = PlayerState.paused;
-                              } else if (playerState == PlayerState.paused) {
-                                audioPlayer.play(kUrl);
-                                playerState = PlayerState.playing;
+                              // Ensure audio player is initialized
+                              if (music.audioPlayer == null) {
+                                music.audioPlayer = AudioPlayer();
+                                music.playerState = PlayerState.stopped;
+                              }
+
+                              if (music.playerState == PlayerState.playing) {
+                                music.audioPlayer?.pause();
+                                music.playerState = PlayerState.paused;
+                              } else if (music.playerState ==
+                                  PlayerState.paused) {
+                                // Check if kUrl is valid before playing
+                                if (kUrl.isNotEmpty &&
+                                    Uri.tryParse(kUrl) != null) {
+                                  music.audioPlayer?.play(UrlSource(kUrl));
+                                  music.playerState = PlayerState.playing;
+                                } else {
+                                  // Show error message
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: Invalid audio URL'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                // If stopped, start playing
+                                if (kUrl.isNotEmpty &&
+                                    Uri.tryParse(kUrl) != null) {
+                                  music.audioPlayer?.play(UrlSource(kUrl));
+                                  music.playerState = PlayerState.playing;
+                                } else {
+                                  // Show error message
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: Invalid audio URL'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             });
                           },
@@ -325,16 +368,12 @@ class AppState extends State<Musify> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 42.0),
                       child: Center(
-                        child: GradientText(
+                        child: Text(
                           "Musify.",
-                          shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-                          gradient: LinearGradient(colors: [
-                            Color(0xff4db6ac),
-                            Color(0xff61e88a),
-                          ]),
                           style: TextStyle(
                             fontSize: 35,
                             fontWeight: FontWeight.w800,
+                            color: accent,
                           ),
                         ),
                       ),
@@ -512,15 +551,24 @@ class AppState extends State<Musify> {
                                       MediaQuery.of(context).size.height * 0.22,
                                   child: ListView.builder(
                                     scrollDirection: Axis.horizontal,
-                                    itemCount: 15,
+                                    itemCount:
+                                        (data.data as List?)?.length ?? 0,
                                     itemBuilder: (context, index) {
+                                      final List? songList = data.data as List?;
+                                      if (songList == null ||
+                                          index >= songList.length) {
+                                        return Container(); // Return empty container for safety
+                                      }
+
                                       return getTopSong(
-                                          data.data[index]["image"],
-                                          data.data[index]["title"],
-                                          data.data[index]["more_info"]
-                                                  ["artistMap"]
-                                              ["primary_artists"][0]["name"],
-                                          data.data[index]["id"]);
+                                          songList[index]["image"] ?? "",
+                                          songList[index]["title"] ?? "Unknown",
+                                          songList[index]["more_info"]
+                                                          ?["artistMap"]
+                                                      ?["primary_artists"]?[0]
+                                                  ?["name"] ??
+                                              "Unknown",
+                                          songList[index]["id"] ?? "");
                                     },
                                   ),
                                 ),

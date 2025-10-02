@@ -1,31 +1,28 @@
 import 'dart:async';
 
-import 'package:audioplayer/audioplayer.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:gradient_widgets/gradient_widgets.dart';
+// import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:Musify/style/appColors.dart';
 
 import 'API/saavn.dart';
 
 String status = 'hidden';
-AudioPlayer audioPlayer;
-PlayerState playerState;
+AudioPlayer? audioPlayer;
+PlayerState? playerState;
 
 typedef void OnError(Exception exception);
-
-enum PlayerState { stopped, playing, paused }
 
 class AudioApp extends StatefulWidget {
   @override
   AudioAppState createState() => AudioAppState();
 }
 
-@override
 class AudioAppState extends State<AudioApp> {
-  Duration duration;
-  Duration position;
+  Duration? duration;
+  Duration? position;
 
   get isPlaying => playerState == PlayerState.playing;
 
@@ -39,8 +36,8 @@ class AudioAppState extends State<AudioApp> {
 
   bool isMuted = false;
 
-  StreamSubscription _positionSubscription;
-  StreamSubscription _audioPlayerStateSubscription;
+  StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription? _audioPlayerStateSubscription;
 
   @override
   void initState() {
@@ -51,13 +48,27 @@ class AudioAppState extends State<AudioApp> {
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
+    _audioPlayerStateSubscription?.cancel();
+    audioPlayer?.dispose();
     super.dispose();
   }
 
   void initAudioPlayer() {
-    if (audioPlayer == null) {
-      audioPlayer = AudioPlayer();
+    // Dispose previous instance if it exists
+    if (audioPlayer != null) {
+      _positionSubscription?.cancel();
+      _audioPlayerStateSubscription?.cancel();
+      audioPlayer!.dispose().catchError((e) {
+        debugPrint('Error disposing previous AudioPlayer: $e');
+      });
+      audioPlayer = null;
     }
+
+    // Always create a fresh AudioPlayer instance for each new song
+    audioPlayer = AudioPlayer();
+    debugPrint('✅ Created fresh AudioPlayer instance');
+
     setState(() {
       if (checker == "Haa") {
         stop();
@@ -74,16 +85,18 @@ class AudioAppState extends State<AudioApp> {
       }
     });
 
-    _positionSubscription = audioPlayer.onAudioPositionChanged
-        .listen((p) => {if (mounted) setState(() => position = p)});
+    _positionSubscription = audioPlayer!.onPositionChanged.listen((p) {
+      if (mounted) setState(() => position = p);
+    });
 
     _audioPlayerStateSubscription =
-        audioPlayer.onPlayerStateChanged.listen((s) {
-      if (s == AudioPlayerState.PLAYING) {
-        {
-          if (mounted) setState(() => duration = audioPlayer.duration);
-        }
-      } else if (s == AudioPlayerState.STOPPED) {
+        audioPlayer!.onPlayerStateChanged.listen((s) {
+      if (s == PlayerState.playing) {
+        // Get duration when playing starts
+        audioPlayer!.getDuration().then((d) {
+          if (mounted && d != null) setState(() => duration = d);
+        });
+      } else if (s == PlayerState.stopped) {
         onComplete();
         if (mounted)
           setState(() {
@@ -91,6 +104,7 @@ class AudioAppState extends State<AudioApp> {
           });
       }
     }, onError: (msg) {
+      debugPrint('AudioPlayer error: $msg');
       if (mounted)
         setState(() {
           playerState = PlayerState.stopped;
@@ -101,31 +115,110 @@ class AudioAppState extends State<AudioApp> {
   }
 
   Future play() async {
-    await audioPlayer.play(kUrl);
-    if (mounted)
-      setState(() {
-        playerState = PlayerState.playing;
-      });
+    // Ensure we have a valid AudioPlayer instance - create fresh one if needed
+    if (audioPlayer == null) {
+      debugPrint('🔄 AudioPlayer was null, creating fresh instance...');
+      initAudioPlayer();
+      // Wait a moment for initialization
+      await Future.delayed(Duration(milliseconds: 100));
+    }
+
+    // Check if kUrl is valid before trying to play
+    if (kUrl.isEmpty || Uri.tryParse(kUrl) == null) {
+      debugPrint('❌ Cannot play: Invalid or empty URL - $kUrl');
+      // Show error to user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: Unable to play song. Invalid audio URL.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      debugPrint('🎵 Attempting to play URL: $kUrl');
+
+      // Stop any previous playback first
+      if (playerState == PlayerState.playing) {
+        await audioPlayer!.stop();
+      }
+
+      await audioPlayer!.play(UrlSource(kUrl));
+      if (mounted)
+        setState(() {
+          playerState = PlayerState.playing;
+        });
+      debugPrint('✅ Successfully started playing');
+    } catch (e) {
+      debugPrint('❌ Error playing audio: $e');
+      // If we get a disposed player error, create a fresh instance and retry
+      if (e.toString().contains('disposed') ||
+          e.toString().contains('created')) {
+        debugPrint(
+            '🔄 Player was disposed, creating fresh instance and retrying...');
+        initAudioPlayer();
+        await Future.delayed(Duration(milliseconds: 200));
+        try {
+          await audioPlayer!.play(UrlSource(kUrl));
+          if (mounted)
+            setState(() {
+              playerState = PlayerState.playing;
+            });
+          debugPrint('✅ Successfully started playing after recreating player');
+        } catch (retryError) {
+          debugPrint('❌ Retry failed: $retryError');
+          // Show error to user
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error playing song: $retryError'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        // Show error to user
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error playing song: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future pause() async {
-    await audioPlayer.pause();
+    await audioPlayer!.pause();
     setState(() {
       playerState = PlayerState.paused;
     });
   }
 
   Future stop() async {
-    await audioPlayer.stop();
-    if (mounted)
-      setState(() {
-        playerState = PlayerState.stopped;
-        position = Duration();
-      });
+    try {
+      if (audioPlayer != null) {
+        await audioPlayer!.stop();
+        if (mounted)
+          setState(() {
+            playerState = PlayerState.stopped;
+            position = Duration();
+          });
+        debugPrint('✅ Successfully stopped playback');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error stopping audio: $e');
+      // Even if stop fails, update the UI state
+      if (mounted)
+        setState(() {
+          playerState = PlayerState.stopped;
+          position = Duration();
+        });
+    }
   }
 
   Future mute(bool muted) async {
-    await audioPlayer.mute(muted);
+    await audioPlayer!.setVolume(muted ? 0.0 : 1.0);
     if (mounted)
       setState(() {
         isMuted = muted;
@@ -154,18 +247,12 @@ class AudioAppState extends State<AudioApp> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          brightness: Brightness.dark,
           backgroundColor: Colors.transparent,
           elevation: 0,
           //backgroundColor: Color(0xff384850),
           centerTitle: true,
-          title: GradientText(
+          title: Text(
             "Now Playing",
-            shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-            gradient: LinearGradient(colors: [
-              Color(0xff4db6ac),
-              Color(0xff61e88a),
-            ]),
             style: TextStyle(
               color: accent,
               fontSize: 25,
@@ -207,17 +294,14 @@ class AudioAppState extends State<AudioApp> {
                   padding: const EdgeInsets.only(top: 35.0, bottom: 35),
                   child: Column(
                     children: <Widget>[
-                      GradientText(
+                      Text(
                         title,
-                        shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-                        gradient: LinearGradient(colors: [
-                          Color(0xff4db6ac),
-                          Color(0xff61e88a),
-                        ]),
                         textScaleFactor: 2.5,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: accent),
                       ),
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
@@ -254,12 +338,12 @@ class AudioAppState extends State<AudioApp> {
               Slider(
                   activeColor: accent,
                   inactiveColor: Colors.green[50],
-                  value: position?.inMilliseconds?.toDouble() ?? 0.0,
+                  value: position?.inMilliseconds.toDouble() ?? 0.0,
                   onChanged: (double value) {
-                    return audioPlayer.seek((value / 1000).roundToDouble());
+                    audioPlayer!.seek(Duration(milliseconds: value.round()));
                   },
                   min: 0.0,
-                  max: duration.inMilliseconds.toDouble()),
+                  max: duration?.inMilliseconds.toDouble() ?? 0.0),
             if (position != null) _buildProgressView(),
             Padding(
               padding: const EdgeInsets.only(top: 18.0),
@@ -314,10 +398,11 @@ class AudioAppState extends State<AudioApp> {
                   Padding(
                     padding: const EdgeInsets.only(top: 40.0),
                     child: Builder(builder: (context) {
-                      return FlatButton(
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18.0)),
-                          color: Colors.black12,
+                      return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.black12,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18.0))),
                           onPressed: () {
                             showBottomSheet(
                                 context: context,
