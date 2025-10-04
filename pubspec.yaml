@@ -31,15 +31,11 @@ dependencies:
   # audioplayer: 0.8.1
   audioplayers: ^5.2.1
   # audioplayer_web: 0.7.1
-  # assets_audio_player: ^3.1.1  # Removed due to Kotlin JVM target compatibility issues
-  # des_plugin: ^0.0.3
-  # crypto: ^3.0.3  # Replaced des_plugin with crypto for encryption
-  # pointycastle: ^3.9.1  # Added for proper DES decryption support
-  # encrypt: ^5.0.3  # Added for proper DES encryption/decryption
   dart_des: ^1.0.1  # Pure Dart DES implementation (port of pyDES)
   # ext_storage: ^1.0.3
   path_provider: ^2.1.1  # Replaced ext_storage with path_provider
   # audiotagger: ^2.2.1  # Removed due to Android Gradle Plugin compatibility issues
+  audiotags: ^1.4.5
   # progress_dialog: ^1.2.4
   flutter_easyloading: ^3.0.5  # Replaced progress_dialog with flutter_easyloading
   # gradient_widgets: ^0.6.0  # Temporarily disabled due to TextTheme.button compatibility issue

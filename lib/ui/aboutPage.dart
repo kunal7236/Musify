@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 // import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import 'package:Musify/helper/utils.dart';
+import 'package:Musify/helper/contact_widget.dart';
 import 'package:Musify/style/appColors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -53,15 +52,10 @@ class AboutPage extends StatelessWidget {
 class AboutCards extends StatelessWidget {
   Future<void> launchOnTap(String url) async {
     final Uri uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(
-        uri,
-        mode: LaunchMode.inAppWebView,
-        webViewConfiguration: const WebViewConfiguration(
-          enableJavaScript: true,
-        ),
-      );
-    } else {
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.platformDefault,
+    )) {
       throw 'Could not launch $url';
     }
   }
@@ -97,240 +91,46 @@ class AboutCards extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0, left: 10, right: 10),
-            child: Divider(
-              color: Colors.white24,
-              thickness: 0.8,
-            ),
+          ContactCard(
+            name: 'Harsh V23',
+            subtitle: 'App Developer',
+            imageUrl: 'https://telegram.im/img/harshv23',
+            telegramUrl: 'https://telegram.dog/harshv23',
+            xUrl: 'https://x.com/harshv23',
+            textColor: accentLight,
           ),
-          Padding(
-            padding:
-                const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 6),
-            child: Card(
-              color: Color(0xff263238),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.0)),
-              elevation: 2.3,
-              child: ListTile(
-                leading: Container(
-                  height: 50,
-                  width: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      fit: BoxFit.fill,
-                      image: NetworkImage("https://telegram.im/img/harshv23"),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Harsh V23',
-                  style: TextStyle(color: accentLight),
-                ),
-                subtitle: Text(
-                  'App Developer',
-                  style: TextStyle(color: accentLight),
-                ),
-                trailing: Wrap(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.send,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Telegram',
-                      onPressed: () async {
-                        await launchOnTap("https://telegram.dog/harshv23");
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.twitter,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Twitter',
-                      onPressed: () async {
-                        await launchOnTap("https://twitter.com/harshv23");
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ContactCard(
+            name: 'Sumanjay',
+            subtitle: 'App Developer',
+            imageUrl: 'https://telegra.ph/file/a64152b2fae1bf6e7d98e.jpg',
+            telegramUrl: 'https://telegram.dog/cyberboysumanjay',
+            xUrl: 'https://x.com/cyberboysj',
+            textColor: accentLight,
           ),
-          Padding(
-            padding:
-                const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 6),
-            child: Card(
-              color: Color(0xff263238),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              elevation: 2.3,
-              child: ListTile(
-                leading: Container(
-                  width: 50.0,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      fit: BoxFit.fill,
-                      image: NetworkImage(
-                          "https://telegra.ph/file/a64152b2fae1bf6e7d98e.jpg"),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Sumanjay',
-                  style: TextStyle(color: accentLight),
-                ),
-                subtitle: Text(
-                  'App Developer',
-                  style: TextStyle(color: accentLight),
-                ),
-                trailing: Wrap(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.send,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Telegram',
-                      onPressed: () async {
-                        await launchOnTap(
-                            "https://telegram.dog/cyberboysumanjay");
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.twitter,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Twitter',
-                      onPressed: () async {
-                        await launchOnTap("https://twitter.com/cyberboysj");
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ContactCard(
+            name: 'Dhruvan Bhalara',
+            subtitle: 'Contributor',
+            imageUrl: 'https://avatars1.githubusercontent.com/u/53393418?v=4',
+            telegramUrl: 'https://t.me/dhruvanbhalara',
+            xUrl: 'https://x.com/dhruvanbhalara',
+            textColor: accentLight,
           ),
-          Padding(
-            padding:
-                const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 6),
-            child: Card(
-              color: Color(0xff263238),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              elevation: 2.3,
-              child: ListTile(
-                leading: Container(
-                  width: 50.0,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      fit: BoxFit.fill,
-                      image: NetworkImage(
-                          "https://avatars1.githubusercontent.com/u/53393418?v=4"),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Dhruvan Bhalara',
-                  style: TextStyle(color: accentLight),
-                ),
-                subtitle: Text(
-                  'Contributor',
-                  style: TextStyle(color: accentLight),
-                ),
-                trailing: Wrap(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.send,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Telegram',
-                      onPressed: () async {
-                        await launchOnTap("https://t.me/dhruvanbhalara");
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.twitter,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Twitter',
-                      onPressed: () async {
-                        await launchOnTap("https://twitter.com/dhruvanbhalara");
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding:
-                const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 6),
-            child: Card(
-              color: Color(0xff263238),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              elevation: 2.3,
-              child: ListTile(
-                leading: Container(
-                  width: 50.0,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    image: DecorationImage(
-                      fit: BoxFit.fill,
-                      image: NetworkImage(
-                          "https://avatars3.githubusercontent.com/u/6892756?v=4"),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Kapil Jhajhria',
-                  style: TextStyle(color: accentLight),
-                ),
-                subtitle: Text(
-                  'Contributor',
-                  style: TextStyle(color: accentLight),
-                ),
-                trailing: Wrap(
-                  children: <Widget>[
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.send,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Telegram',
-                      onPressed: () async {
-                        await launchOnTap("https://telegram.dog/kapiljhajhria");
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        MdiIcons.twitter,
-                        color: accentLight,
-                      ),
-                      tooltip: 'Contact on Twitter',
-                      onPressed: () async {
-                        await launchOnTap("https://twitter.com/kapiljhajhria");
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          ContactCard(
+            name: 'Kapil Jhajhria',
+            subtitle: 'Contributor',
+            imageUrl: 'https://avatars3.githubusercontent.com/u/6892756?v=4',
+            telegramUrl: 'https://telegram.dog/kapiljhajhria',
+            xUrl: 'https://x.com/kapiljhajhria',
+            textColor: accentLight,
+          ),  
+           ContactCard(
+            name: 'Kunal Kashyap',
+            subtitle: 'App Developer',
+            imageUrl: 'https://avatars.githubusercontent.com/u/118793083?v=4',
+            telegramUrl: 'https://telegram.dog/NinjaApache',
+            xUrl: 'https://x.com/KashyapK257',
+            textColor: accentLight,
+          ),                 
         ],
       ),
     );
