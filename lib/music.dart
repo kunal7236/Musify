@@ -454,7 +454,7 @@ class AudioAppState extends State<AudioApp> {
                                               ],
                                             ),
                                           ),
-                                          lyrics != "null"
+                                          has_lyrics != "false"
                                               ? Expanded(
                                                   flex: 1,
                                                   child: Padding(

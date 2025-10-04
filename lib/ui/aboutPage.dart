@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:Musify/helper/utils.dart';
 import 'package:Musify/style/appColors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutPage extends StatelessWidget {
   @override
@@ -50,6 +51,21 @@ class AboutPage extends StatelessWidget {
 }
 
 class AboutCards extends StatelessWidget {
+  Future<void> launchOnTap(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.inAppWebView,
+        webViewConfiguration: const WebViewConfiguration(
+          enableJavaScript: true,
+        ),
+      );
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -124,8 +140,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
-                      onPressed: () {
-                        launchURL("https://telegram.dog/harshv23");
+                      onPressed: () async {
+                        await launchOnTap("https://telegram.dog/harshv23");
                       },
                     ),
                     IconButton(
@@ -134,8 +150,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Twitter',
-                      onPressed: () {
-                        launchURL("https://twitter.com/harshv23");
+                      onPressed: () async {
+                        await launchOnTap("https://twitter.com/harshv23");
                       },
                     ),
                   ],
@@ -181,8 +197,9 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
-                      onPressed: () {
-                        launchURL("https://telegram.dog/cyberboysumanjay");
+                      onPressed: () async {
+                        await launchOnTap(
+                            "https://telegram.dog/cyberboysumanjay");
                       },
                     ),
                     IconButton(
@@ -191,8 +208,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Twitter',
-                      onPressed: () {
-                        launchURL("https://twitter.com/cyberboysj");
+                      onPressed: () async {
+                        await launchOnTap("https://twitter.com/cyberboysj");
                       },
                     ),
                   ],
@@ -238,8 +255,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
-                      onPressed: () {
-                        launchURL("https://t.me/dhruvanbhalara");
+                      onPressed: () async {
+                        await launchOnTap("https://t.me/dhruvanbhalara");
                       },
                     ),
                     IconButton(
@@ -248,8 +265,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Twitter',
-                      onPressed: () {
-                        launchURL("https://twitter.com/dhruvanbhalara");
+                      onPressed: () async {
+                        await launchOnTap("https://twitter.com/dhruvanbhalara");
                       },
                     ),
                   ],
@@ -295,8 +312,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Telegram',
-                      onPressed: () {
-                        launchURL("https://telegram.dog/kapiljhajhria");
+                      onPressed: () async {
+                        await launchOnTap("https://telegram.dog/kapiljhajhria");
                       },
                     ),
                     IconButton(
@@ -305,8 +322,8 @@ class AboutCards extends StatelessWidget {
                         color: accentLight,
                       ),
                       tooltip: 'Contact on Twitter',
-                      onPressed: () {
-                        launchURL("https://twitter.com/kapiljhajhria");
+                      onPressed: () async {
+                        await launchOnTap("https://twitter.com/kapiljhajhria");
                       },
                     ),
                   ],

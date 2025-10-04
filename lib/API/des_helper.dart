@@ -60,104 +60,105 @@ class DESHelper {
         debugPrint('❌ dart_des DES decryption failed: $e');
       }
 
-      // Fallback approaches if dart_des fails
-      debugPrint('🔄 Trying fallback decryption approaches...');
+      // // Fallback approaches if dart_des fails
+      // debugPrint('🔄 Trying fallback decryption approaches...');
 
-      // Fallback 1: Try different padding modes
-      try {
-        // Sometimes the encrypted data might need different handling
-        String fallbackResult = _tryDifferentDESModes(encryptedBytes);
-        if (fallbackResult.isNotEmpty) return fallbackResult;
-      } catch (e) {
-        debugPrint('❌ Fallback DES modes failed: $e');
-      }
+      // // Fallback 1: Try different padding modes
+      // try {
+      //   // Sometimes the encrypted data might need different handling
+      //   String fallbackResult = _tryDifferentDESModes(encryptedBytes);
+      //   if (fallbackResult.isNotEmpty) return fallbackResult;
+      // } catch (e) {
+      //   debugPrint('❌ Fallback DES modes failed: $e');
+      // }
 
-      // Fallback 2: Our custom approaches
-      return _customDESApproaches(encryptedBytes);
+      // // Fallback 2: Our custom approaches
+      // return _customDESApproaches(encryptedBytes);
     } catch (e) {
       debugPrint('❌ DES decryption failed: $e');
       return "";
     }
+    return "";
   }
 
-  /// Try different DES modes and configurations
-  static String _tryDifferentDESModes(List<int> data) {
-    try {
-      debugPrint('� Trying different DES modes...');
+  // /// Try different DES modes and configurations
+  // static String _tryDifferentDESModes(List<int> data) {
+  //   try {
+  //     debugPrint('� Trying different DES modes...');
 
-      // Mode 1: ECB with different key formats
-      List<String> keyVariants = [
-        _key, // "38346591"
-        _key.padRight(8, '0'), // Ensure 8 bytes
-        _key + _key, // Doubled key
-      ];
+  //     // Mode 1: ECB with different key formats
+  //     List<String> keyVariants = [
+  //       _key, // "38346591"
+  //       _key.padRight(8, '0'), // Ensure 8 bytes
+  //       _key + _key, // Doubled key
+  //     ];
 
-      for (String keyVariant in keyVariants) {
-        try {
-          List<int> keyBytes = keyVariant.codeUnits;
-          if (keyBytes.length > 8) keyBytes = keyBytes.sublist(0, 8);
-          if (keyBytes.length < 8) {
-            while (keyBytes.length < 8) keyBytes.add(0);
-          }
+  //     for (String keyVariant in keyVariants) {
+  //       try {
+  //         List<int> keyBytes = keyVariant.codeUnits;
+  //         if (keyBytes.length > 8) keyBytes = keyBytes.sublist(0, 8);
+  //         if (keyBytes.length < 8) {
+  //           while (keyBytes.length < 8) keyBytes.add(0);
+  //         }
 
-          DES desDecryptor = DES(key: keyBytes, mode: DESMode.ECB);
-          List<int> decrypted = desDecryptor.decrypt(data);
-          String result = _extractValidUrl(
-              utf8.decode(decrypted, allowMalformed: true), "DES variant");
+  //         DES desDecryptor = DES(key: keyBytes, mode: DESMode.ECB);
+  //         List<int> decrypted = desDecryptor.decrypt(data);
+  //         String result = _extractValidUrl(
+  //             utf8.decode(decrypted, allowMalformed: true), "DES variant");
 
-          if (result.isNotEmpty) {
-            debugPrint('✅ DES variant successful with key: $keyVariant');
-            return result;
-          }
-        } catch (e) {
-          debugPrint('❌ DES variant failed with key $keyVariant: $e');
-        }
-      }
+  //         if (result.isNotEmpty) {
+  //           debugPrint('✅ DES variant successful with key: $keyVariant');
+  //           return result;
+  //         }
+  //       } catch (e) {
+  //         debugPrint('❌ DES variant failed with key $keyVariant: $e');
+  //       }
+  //     }
 
-      return "";
-    } catch (e) {
-      debugPrint('❌ DES mode variants failed: $e');
-      return "";
-    }
-  }
+  //     return "";
+  //   } catch (e) {
+  //     debugPrint('❌ DES mode variants failed: $e');
+  //     return "";
+  //   }
+  // }
 
-  /// Custom DES approaches as backup
-  static String _customDESApproaches(List<int> data) {
-    try {
-      debugPrint('� Trying custom DES approaches...');
+  // /// Custom DES approaches as backup
+  // static String _customDESApproaches(List<int> data) {
+  //   try {
+  //     debugPrint('� Trying custom DES approaches...');
 
-      List<int> keyBytes = _key.codeUnits;
+  //     List<int> keyBytes = _key.codeUnits;
 
-      // Approach 1: Simple XOR with key rotation
-      List<int> approach1 = [];
-      for (int i = 0; i < data.length; i++) {
-        int keyIndex = i % keyBytes.length;
-        approach1.add(data[i] ^ keyBytes[keyIndex]);
-      }
-      String result1 = _extractValidUrl(
-          utf8.decode(approach1, allowMalformed: true), "Custom XOR");
-      if (result1.isNotEmpty) return result1;
+  //     // Approach 1: Simple XOR with key rotation
+  //     List<int> approach1 = [];
+  //     for (int i = 0; i < data.length; i++) {
+  //       int keyIndex = i % keyBytes.length;
+  //       approach1.add(data[i] ^ keyBytes[keyIndex]);
+  //     }
+  //     String result1 = _extractValidUrl(
+  //         utf8.decode(approach1, allowMalformed: true), "Custom XOR");
+  //     if (result1.isNotEmpty) return result1;
 
-      // Approach 2: Block-wise processing
-      List<int> approach2 = [];
-      for (int i = 0; i < data.length; i += 8) {
-        for (int j = 0; j < 8 && (i + j) < data.length; j++) {
-          int keyIndex = j % keyBytes.length;
-          int decrypted = data[i + j] ^ keyBytes[keyIndex];
-          decrypted = ((decrypted >> 1) | (decrypted << 7)) & 0xFF;
-          approach2.add(decrypted);
-        }
-      }
-      String result2 = _extractValidUrl(
-          utf8.decode(approach2, allowMalformed: true), "Custom Block");
-      if (result2.isNotEmpty) return result2;
+  //     // Approach 2: Block-wise processing
+  //     List<int> approach2 = [];
+  //     for (int i = 0; i < data.length; i += 8) {
+  //       for (int j = 0; j < 8 && (i + j) < data.length; j++) {
+  //         int keyIndex = j % keyBytes.length;
+  //         int decrypted = data[i + j] ^ keyBytes[keyIndex];
+  //         decrypted = ((decrypted >> 1) | (decrypted << 7)) & 0xFF;
+  //         approach2.add(decrypted);
+  //       }
+  //     }
+  //     String result2 = _extractValidUrl(
+  //         utf8.decode(approach2, allowMalformed: true), "Custom Block");
+  //     if (result2.isNotEmpty) return result2;
 
-      return "";
-    } catch (e) {
-      debugPrint('❌ Custom DES approaches failed: $e');
-      return "";
-    }
-  }
+  //     return "";
+  //   } catch (e) {
+  //     debugPrint('❌ Custom DES approaches failed: $e');
+  //     return "";
+  //   }
+  // }
 
   /// Extract valid URL from decrypted text
   static String _extractValidUrl(String text, String approach) {

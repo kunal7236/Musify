@@ -12,6 +12,7 @@ String kUrl = "",
     album = "",
     artist = "",
     lyrics = "",
+    has_lyrics = "",
     has_320 = "",
     rawkUrl = "";
 
@@ -20,10 +21,15 @@ const String searchBaseUrl =
     "https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=";
 const String songDetailsBaseUrl =
     "https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0%3F_marker%3D0&_format=json&pids=";
+const String albumDetailsBaseUrl =
+    "https://www.jiosaavn.com/api.php?__call=content.getAlbumDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&albumid=";
+const String playlistDetailsBaseUrl =
+    "https://www.jiosaavn.com/api.php?__call=playlist.getDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&listid=";
+const String lyricsBaseUrl =
+    "https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&ctx=web6dot0&api_version=4&_format=json&_marker=0%3F_marker%3D0&lyrics_id=";
 
 // DES Decryption function (Python pyDes equivalent implementation)
 String decryptUrl(String encryptedUrl) {
-  // Use the dedicated DES helper with multiple approaches
   return DESHelper.decryptUrl(encryptedUrl);
 }
 
@@ -87,13 +93,14 @@ Future<List> fetchSongsList(String searchQuery) async {
   }
 }
 
-// Get song details (exactly as per your Python jiosaavn.py get_song function)
+// Get song details (exactly as per your Python jiosaavn.py get_song+get_lyrics function)
 Future<bool> fetchSongDetails(String songId) async {
   try {
     debugPrint('🎵 Getting song details for ID: $songId');
 
     // Use the exact API endpoint from your Python endpoints.py
     String songDetailsUrl = songDetailsBaseUrl + songId;
+
     debugPrint('📡 API URL: $songDetailsUrl');
 
     var response = await http.get(Uri.parse(songDetailsUrl));
@@ -131,6 +138,7 @@ Future<bool> fetchSongDetails(String songId) async {
     title = formatString(songData["song"] ?? "");
     album = formatString(songData["album"] ?? "");
     artist = formatString(songData["singers"] ?? "");
+    has_lyrics = songData["has_lyrics"] ?? "false";
     image =
         (songData["image"] ?? "").toString().replaceAll("150x150", "500x500");
     has_320 = songData["320kbps"] ?? "false";
@@ -139,6 +147,20 @@ Future<bool> fetchSongDetails(String songId) async {
     debugPrint('🎤 Artist: $artist');
     debugPrint('💿 Album: $album');
     debugPrint('🔊 320kbps: $has_320');
+    debugPrint('🔊 has lyrics: $has_lyrics');
+
+    if (has_lyrics == "true") {
+      String lyricsUrl = lyricsBaseUrl + songId;
+      debugPrint('📡 API URL: $lyricsUrl');
+      var resLyrics = await http.get(Uri.parse(lyricsUrl));
+      if (resLyrics.statusCode != 200) {
+        debugPrint('❌ API failed with status: ${resLyrics.statusCode}');
+        checker = "something went wrong";
+      }
+      dynamic lyricsResponse = json.decode(resLyrics.body);
+      lyrics = lyricsResponse["lyrics"];
+      lyrics=lyrics.replaceAll("<br>", "\n");
+    }
 
     // Debug: Print all available fields in songData
     debugPrint('🔍 Available songData fields: ${songData.keys.toList()}');
@@ -173,121 +195,121 @@ Future<bool> fetchSongDetails(String songId) async {
       debugPrint('❌ Decryption failed: $e');
     }
 
-    // Alternative approach (try other fields)
-    if (mediaUrl.isEmpty) {
-      debugPrint('🔄 Trying alternative URL construction methods...');
+    // // Alternative approach (try other fields)
+    // if (mediaUrl.isEmpty) {
+    //   debugPrint('🔄 Trying alternative URL construction methods...');
 
-      try {
-        // Method 1: Check for direct media_url field
-        if (songData["media_url"] != null) {
-          String directUrl = songData["media_url"] ?? "";
-          if (directUrl.isNotEmpty) {
-            debugPrint('🔄 Found direct media_url: $directUrl');
-            mediaUrl = directUrl.replaceAll("_96.mp4", "_320.mp4");
-            if (mediaUrl.isNotEmpty) {
-              debugPrint('✅ Using direct media_url: $mediaUrl');
-            }
-          }
-        }
+    //   try {
+    //     // Method 1: Check for direct media_url field
+    //     if (songData["media_url"] != null) {
+    //       String directUrl = songData["media_url"] ?? "";
+    //       if (directUrl.isNotEmpty) {
+    //         debugPrint('🔄 Found direct media_url: $directUrl');
+    //         mediaUrl = directUrl.replaceAll("_96.mp4", "_320.mp4");
+    //         if (mediaUrl.isNotEmpty) {
+    //           debugPrint('✅ Using direct media_url: $mediaUrl');
+    //         }
+    //       }
+    //     }
 
-        // Method 2: Try media_preview_url with proper construction
-        if (mediaUrl.isEmpty && songData["media_preview_url"] != null) {
-          String previewUrl = songData["media_preview_url"] ?? "";
-          if (previewUrl.isNotEmpty) {
-            debugPrint('🔄 Found media_preview_url: $previewUrl');
+    //     // Method 2: Try media_preview_url with proper construction
+    //     if (mediaUrl.isEmpty && songData["media_preview_url"] != null) {
+    //       String previewUrl = songData["media_preview_url"] ?? "";
+    //       if (previewUrl.isNotEmpty) {
+    //         debugPrint('🔄 Found media_preview_url: $previewUrl');
 
-            // Convert preview URL to full URL properly - use aac.saavncdn.com
-            String constructedUrl = previewUrl
-                .replaceAll("preview.saavncdn.com", "aac.saavncdn.com")
-                .replaceAll("_96_p.mp4", "_320.mp4")
-                .replaceAll("_96.mp4", "_320.mp4");
+    //         // Convert preview URL to full URL properly - use aac.saavncdn.com
+    //         String constructedUrl = previewUrl
+    //             .replaceAll("preview.saavncdn.com", "aac.saavncdn.com")
+    //             .replaceAll("_96_p.mp4", "_320.mp4")
+    //             .replaceAll("_96.mp4", "_320.mp4");
 
-            if (constructedUrl != previewUrl &&
-                constructedUrl.contains("http")) {
-              debugPrint('✅ Constructed URL from preview: $constructedUrl');
-              mediaUrl = constructedUrl;
-            }
-          }
-        }
+    //         if (constructedUrl != previewUrl &&
+    //             constructedUrl.contains("http")) {
+    //           debugPrint('✅ Constructed URL from preview: $constructedUrl');
+    //           mediaUrl = constructedUrl;
+    //         }
+    //       }
+    //     }
 
-        // Method 3: Check more_info for alternative URLs
-        if (mediaUrl.isEmpty) {
-          var moreInfo = songData["more_info"];
-          if (moreInfo != null) {
-            debugPrint('🔄 Checking more_info for alternative URLs...');
+    // // Method 3: Check more_info for alternative URLs
+    // if (mediaUrl.isEmpty) {
+    //   var moreInfo = songData["more_info"];
+    //   if (moreInfo != null) {
+    //     debugPrint('🔄 Checking more_info for alternative URLs...');
 
-            // Check for various URL fields in more_info
-            List<String> urlFields = [
-              "media_url",
-              "song_url",
-              "perma_url",
-              "vlink"
-            ];
-            for (String field in urlFields) {
-              if (moreInfo[field] != null) {
-                String altUrl = moreInfo[field].toString();
-                if (altUrl.contains("http") && altUrl.contains(".mp4")) {
-                  debugPrint('🔍 Found $field: $altUrl');
-                  mediaUrl = altUrl.replaceAll("_96.mp4", "_320.mp4");
-                  break;
-                }
-              }
-            }
+    //     // Check for various URL fields in more_info
+    //     List<String> urlFields = [
+    //       "media_url",
+    //       "song_url",
+    //       "perma_url",
+    //       "vlink"
+    //     ];
+    //     for (String field in urlFields) {
+    //       if (moreInfo[field] != null) {
+    //         String altUrl = moreInfo[field].toString();
+    //         if (altUrl.contains("http") && altUrl.contains(".mp4")) {
+    //           debugPrint('🔍 Found $field: $altUrl');
+    //           mediaUrl = altUrl.replaceAll("_96.mp4", "_320.mp4");
+    //           break;
+    //         }
+    //       }
+    //     }
 
-            // Try encrypted_media_url from more_info if different
-            if (mediaUrl.isEmpty && moreInfo["encrypted_media_url"] != null) {
-              String altEncryptedUrl = moreInfo["encrypted_media_url"];
-              if (altEncryptedUrl.isNotEmpty &&
-                  altEncryptedUrl != encryptedMediaUrl) {
-                debugPrint(
-                    '🔄 Trying alternative encrypted URL from more_info...');
-                mediaUrl = decryptUrl(altEncryptedUrl);
-              }
-            }
-          }
-        }
+    //     // Try encrypted_media_url from more_info if different
+    //     if (mediaUrl.isEmpty && moreInfo["encrypted_media_url"] != null) {
+    //       String altEncryptedUrl = moreInfo["encrypted_media_url"];
+    //       if (altEncryptedUrl.isNotEmpty &&
+    //           altEncryptedUrl != encryptedMediaUrl) {
+    //         debugPrint(
+    //             '🔄 Trying alternative encrypted URL from more_info...');
+    //         mediaUrl = decryptUrl(altEncryptedUrl);
+    //       }
+    //     }
+    //   }
+    // }
 
-        // Method 4: Try to construct URL from song ID and metadata
-        if (mediaUrl.isEmpty) {
-          debugPrint('🔄 Attempting URL construction from song metadata...');
+    // // Method 4: Try to construct URL from song ID and metadata
+    // if (mediaUrl.isEmpty) {
+    //   debugPrint('🔄 Attempting URL construction from song metadata...');
 
-          String songId = songData["id"] ?? "";
-          String permaUrl = songData["perma_url"] ?? "";
+    //   String songId = songData["id"] ?? "";
+    //   String permaUrl = songData["perma_url"] ?? "";
 
-          if (songId.isNotEmpty) {
-            // Try common JioSaavn URL patterns - use aac.saavncdn.com
-            List<String> patterns = [
-              "https://aac.saavncdn.com/${songId}/${songId}_320.mp4",
-              "https://aac.saavncdn.com/${songId.substring(0, 3)}/${songId}_320.mp4",
-              "https://snoidcdncol01.snoidcdn.com/${songId}/${songId}_320.mp4",
-            ];
+    //   if (songId.isNotEmpty) {
+    //     // Try common JioSaavn URL patterns - use aac.saavncdn.com
+    //     List<String> patterns = [
+    //       "https://aac.saavncdn.com/${songId}/${songId}_320.mp4",
+    //       "https://aac.saavncdn.com/${songId.substring(0, 3)}/${songId}_320.mp4",
+    //       "https://snoidcdncol01.snoidcdn.com/${songId}/${songId}_320.mp4",
+    //     ];
 
-            for (String pattern in patterns) {
-              debugPrint('🔍 Testing URL pattern: $pattern');
-              mediaUrl = pattern;
-              break; // Use first pattern for testing
-            }
-          }
+    //     for (String pattern in patterns) {
+    //       debugPrint('🔍 Testing URL pattern: $pattern');
+    //       mediaUrl = pattern;
+    //       break; // Use first pattern for testing
+    //     }
+    //   }
 
-          // If song ID approach didn't work, try constructing from perma_url
-          if (mediaUrl.isEmpty && permaUrl.isNotEmpty) {
-            debugPrint('🔄 Trying to extract ID from perma_url: $permaUrl');
-            // Extract song ID from perma_url if possible
-            RegExp idPattern = RegExp(r'/([^/]+)/?$');
-            Match? match = idPattern.firstMatch(permaUrl);
-            if (match != null) {
-              String extractedId = match.group(1)!;
-              debugPrint('🔍 Extracted ID: $extractedId');
-              mediaUrl =
-                  "https://aac.saavncdn.com/${extractedId}/${extractedId}_320.mp4";
-              debugPrint('🔍 Constructed from perma_url: $mediaUrl');
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('❌ Alternative approach failed: $e');
-      }
-    }
+    //   // If song ID approach didn't work, try constructing from perma_url
+    //   if (mediaUrl.isEmpty && permaUrl.isNotEmpty) {
+    //     debugPrint('🔄 Trying to extract ID from perma_url: $permaUrl');
+    //     // Extract song ID from perma_url if possible
+    //     RegExp idPattern = RegExp(r'/([^/]+)/?$');
+    //     Match? match = idPattern.firstMatch(permaUrl);
+    //     if (match != null) {
+    //       String extractedId = match.group(1)!;
+    //       debugPrint('🔍 Extracted ID: $extractedId');
+    //       mediaUrl =
+    //           "https://aac.saavncdn.com/${extractedId}/${extractedId}_320.mp4";
+    //       debugPrint('🔍 Constructed from perma_url: $mediaUrl');
+    //     }
+    //   }
+    // }
+    //   } catch (e) {
+    //     debugPrint('❌ Alternative approach failed: $e');
+    //   }
+    // }
 
     if (mediaUrl.isEmpty) {
       debugPrint('❌ Failed to get any working media URL');
