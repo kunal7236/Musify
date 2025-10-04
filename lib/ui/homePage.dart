@@ -2,6 +2,7 @@ import 'dart:io';
 
 // import 'package:audiotagger/audiotagger.dart';  // Removed due to compatibility issues
 // import 'package:audiotagger/models/tag.dart';   // Removed due to compatibility issues
+import 'package:audiotags/audiotags.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
@@ -97,115 +98,238 @@ class AppState extends State<Musify> {
   downloadSong(id) async {
     String? filepath;
     String? filepath2;
-    var status = await Permission.storage.status;
-    if (status.isDenied || status.isPermanentlyDenied) {
-      // code of read or write file in external storage (SD card)
-      // You can request multiple permissions at once.
-      Map<Permission, PermissionStatus> statuses = await [
-        Permission.storage,
-      ].request();
-      debugPrint(statuses[Permission.storage].toString());
+
+    // Check Android version and request appropriate permissions
+    bool permissionGranted = false;
+
+    try {
+      // For Android 13+ (API 33+), use media permissions
+      if (await Permission.audio.isDenied) {
+        Map<Permission, PermissionStatus> statuses = await [
+          Permission.audio,
+          // Permission.manageExternalStorage,
+          Permission.storage,
+        ].request();
+
+        permissionGranted = statuses[Permission.audio]?.isGranted == true ||
+            // statuses[Permission.manageExternalStorage]?.isGranted == true ||
+            statuses[Permission.storage]?.isGranted == true;
+      } else {
+        permissionGranted = await Permission.audio.isGranted ||
+            // await Permission.manageExternalStorage.isGranted ||
+            await Permission.storage.isGranted;
+      }
+
+      // Try to get MANAGE_EXTERNAL_STORAGE for Android 11+ for full access
+      if (!permissionGranted && Platform.isAndroid) {
+        var manageStorageStatus =
+            await Permission.manageExternalStorage.request();
+        permissionGranted = manageStorageStatus.isGranted;
+      }
+    } catch (e) {
+      debugPrint('Permission error: $e');
+      // Fallback to storage permission
+      var storageStatus = await Permission.storage.request();
+      permissionGranted = storageStatus.isGranted;
     }
-    status = await Permission.storage.status;
+
+    if (!permissionGranted) {
+      Fluttertoast.showToast(
+          msg:
+              "Storage Permission Required!\nPlease grant storage access to download songs",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 3,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 14.0);
+      return;
+    }
+
+    // Proceed with download
     await fetchSongDetails(id);
-    if (status.isGranted) {
-      EasyLoading.show(status: 'Downloading $title...');
+    EasyLoading.show(status: 'Downloading $title...');
 
-      final filename = title + ".m4a";
-      final artname = title + "_artwork.jpg";
-      //Directory appDocDir = await getExternalStorageDirectory();
-      Directory? musicDir = await getExternalStorageDirectory();
-      String dlPath = "${musicDir?.path}/Music";
-      await Directory(dlPath).create(recursive: true);
+    try {
+      final filename =
+          title.replaceAll(RegExp(r'[^\w\s-]'), '').trim() + ".m4a";
+      final artname =
+          title.replaceAll(RegExp(r'[^\w\s-]'), '').trim() + "_artwork.jpg";
 
-      await File(dlPath + "/" + filename)
-          .create(recursive: true)
-          .then((value) => filepath = value.path);
-      await File(dlPath + "/" + artname)
-          .create(recursive: true)
-          .then((value) => filepath2 = value.path);
-      debugPrint('Audio path $filepath');
-      debugPrint('Image path $filepath2');
+      // Use multiple fallback strategies for file storage
+      Directory? musicDir;
+      String dlPath;
+      String locationDescription;
+
+      if (Platform.isAndroid) {
+        // Strategy 1: Try Downloads/Musify directory (most reliable)
+        try {
+          musicDir = Directory('/storage/emulated/0/Download/Musify');
+          if (!await musicDir.exists()) {
+            await musicDir.create(recursive: true);
+          }
+          // Test write access
+          final testFile = File('${musicDir.path}/.test');
+          await testFile.writeAsString('test');
+          await testFile.delete();
+
+          dlPath = musicDir.path;
+          locationDescription = "Downloads/Musify folder";
+          debugPrint('✅ Using Downloads/Musify directory: $dlPath');
+        } catch (e) {
+          debugPrint('❌ Downloads directory failed: $e');
+
+          // Strategy 2: Try app-specific external directory
+          try {
+            musicDir = await getExternalStorageDirectory();
+            if (musicDir != null) {
+              dlPath = "${musicDir.path}/Music";
+              await Directory(dlPath).create(recursive: true);
+              locationDescription = "App Music folder";
+              debugPrint('✅ Using app-specific directory: $dlPath');
+            } else {
+              throw Exception('External storage not available');
+            }
+          } catch (e2) {
+            debugPrint('❌ App-specific directory failed: $e2');
+
+            // Strategy 3: Use internal app directory
+            musicDir = await getApplicationDocumentsDirectory();
+            dlPath = "${musicDir.path}/Music";
+            await Directory(dlPath).create(recursive: true);
+            locationDescription = "App Documents folder";
+            debugPrint('✅ Using internal app directory: $dlPath');
+          }
+        }
+      } else {
+        // Fallback for other platforms
+        musicDir = await getApplicationDocumentsDirectory();
+        dlPath = "${musicDir.path}/Music";
+        await Directory(dlPath).create(recursive: true);
+        locationDescription = "Documents/Music folder";
+      }
+
+      filepath = "$dlPath/$filename";
+      filepath2 = "$dlPath/$artname";
+
+      debugPrint('Audio path: $filepath');
+      debugPrint('Image path: $filepath2');
+
+      // Check if file already exists
+      if (await File(filepath).exists()) {
+        Fluttertoast.showToast(
+            msg: "File already exists!\n$filename",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 2,
+            backgroundColor: Colors.orange,
+            textColor: Colors.white,
+            fontSize: 14.0);
+        EasyLoading.dismiss();
+        return;
+      }
+
+      // Get the proper audio URL
+      String audioUrl = kUrl;
       if (has_320 == "true") {
-        kUrl = rawkUrl.replaceAll("_96.mp4", "_320.mp4");
+        audioUrl = rawkUrl.replaceAll("_96.mp4", "_320.mp4");
         final client = http.Client();
-        final request = http.Request('HEAD', Uri.parse(kUrl))
+        final request = http.Request('HEAD', Uri.parse(audioUrl))
           ..followRedirects = false;
         final response = await client.send(request);
-        debugPrint(response.statusCode.toString());
-        kUrl = (response.headers['location']) ?? kUrl;
-        debugPrint(rawkUrl);
-        debugPrint(kUrl);
-        final request2 = http.Request('HEAD', Uri.parse(kUrl))
+        debugPrint('Response status: ${response.statusCode}');
+        audioUrl = (response.headers['location']) ?? audioUrl;
+        debugPrint('Raw URL: $rawkUrl');
+        debugPrint('Final URL: $audioUrl');
+
+        final request2 = http.Request('HEAD', Uri.parse(audioUrl))
           ..followRedirects = false;
         final response2 = await client.send(request2);
         if (response2.statusCode != 200) {
-          kUrl = kUrl.replaceAll(".mp4", ".mp3");
+          audioUrl = audioUrl.replaceAll(".mp4", ".mp3");
         }
+        client.close();
       }
-      var request = await HttpClient().getUrl(Uri.parse(kUrl));
+
+      // Download audio file
+      debugPrint('🎵 Starting audio download...');
+      var request = await HttpClient().getUrl(Uri.parse(audioUrl));
       var response = await request.close();
       var bytes = await consolidateHttpClientResponseBytes(response);
-      File file = File(filepath!);
+      File file = File(filepath);
+      await file.writeAsBytes(bytes);
+      debugPrint('✅ Audio file saved successfully');
 
+      // Download image file
+      debugPrint('🖼️ Starting image download...');
       var request2 = await HttpClient().getUrl(Uri.parse(image));
       var response2 = await request2.close();
       var bytes2 = await consolidateHttpClientResponseBytes(response2);
-      File file2 = File(filepath2!);
-
-      await file.writeAsBytes(bytes);
+      File file2 = File(filepath2);
       await file2.writeAsBytes(bytes2);
-      debugPrint("Started tag editing");
+      debugPrint('✅ Image file saved successfully');
 
-      // TODO: Replace with compatible audio tagging library
-      // final tag = Tag(
-      //   title: title,
-      //   artist: artist,
-      //   artwork: filepath2,
-      //   album: album,
-      //   lyrics: lyrics,
-      //   genre: null,
-      // );
+      debugPrint("🏷️ Starting tag editing");
 
-      debugPrint(
-          "Setting up Tags - Temporarily disabled due to compatibility issues");
-      // final tagger = Audiotagger();
-      // await tagger.writeTags(
-      //   path: filepath!,
-      //   tag: tag,
-      // );
-      await Future.delayed(const Duration(seconds: 1), () {});
-      EasyLoading.dismiss();
+      // Add metadata tags
+      final tag = Tag(
+        title: title,
+        trackArtist: artist,
+        pictures: [
+          Picture(
+            bytes: Uint8List.fromList(bytes2),
+            mimeType: MimeType.jpeg,
+            pictureType: PictureType.coverFront,
+          ),
+        ],
+        album: album,
+        lyrics: lyrics,
+      );
 
-      if (await file2.exists()) {
-        await file2.delete();
+      debugPrint("Setting up Tags");
+      try {
+        await AudioTags.write(filepath, tag);
+        debugPrint("✅ Tags written successfully");
+      } catch (e) {
+        debugPrint("⚠️ Error writing tags: $e");
+        // Continue even if tagging fails
       }
-      debugPrint("Done");
+
+      // Clean up temporary image file
+      try {
+        if (await file2.exists()) {
+          await file2.delete();
+          debugPrint('🗑️ Temporary image file cleaned up');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Could not clean up temp file: $e');
+      }
+
+      EasyLoading.dismiss();
+      debugPrint("🎉 Download completed successfully");
+
+      // Show success message with accessible location
       Fluttertoast.showToast(
-          msg: "Download Complete!",
-          toastLength: Toast.LENGTH_SHORT,
+          msg:
+              "✅ Download Complete!\n📁 Saved to: $locationDescription\n🎵 $filename",
+          toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Color(0xff61e88a),
+          timeInSecForIosWeb: 4,
+          backgroundColor: Colors.green[800],
+          textColor: Colors.white,
           fontSize: 14.0);
-    } else if (status.isDenied || status.isPermanentlyDenied) {
+    } catch (e) {
+      EasyLoading.dismiss();
+      debugPrint("❌ Download error: $e");
+
       Fluttertoast.showToast(
-          msg: "Storage Permission Denied!\nCan't Download Songs",
-          toastLength: Toast.LENGTH_SHORT,
+          msg:
+              "❌ Download Failed!\n${e.toString().contains('Permission') ? 'Storage permission denied' : 'Error: ${e.toString().length > 50 ? e.toString().substring(0, 50) + '...' : e}'}",
+          toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Color(0xff61e88a),
-          fontSize: 14.0);
-    } else {
-      Fluttertoast.showToast(
-          msg: "Permission Error!",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.values[50],
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.black,
-          textColor: Color(0xff61e88a),
+          timeInSecForIosWeb: 3,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
           fontSize: 14.0);
     }
   }
