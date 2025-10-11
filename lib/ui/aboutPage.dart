@@ -4,6 +4,8 @@ import 'package:Musify/helper/contact_widget.dart';
 import 'package:Musify/style/appColors.dart';
 
 class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -66,13 +68,15 @@ class AboutPage extends StatelessWidget {
         //   backgroundColor: Colors.transparent,
         //   elevation: 0,
         // ),
-        body: SingleChildScrollView(child: AboutCards()),
+        body: SingleChildScrollView(child: const AboutCards()),
       ),
     );
   }
 }
 
 class AboutCards extends StatelessWidget {
+  const AboutCards({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Material(

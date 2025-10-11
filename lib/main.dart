@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:Musify/style/appColors.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+
 import 'package:Musify/ui/homePage.dart';
 import 'package:Musify/services/audio_player_service.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:flutter/services.dart';
+import 'package:Musify/providers/music_player_provider.dart';
+import 'package:Musify/providers/search_provider.dart';
+import 'package:Musify/providers/app_state_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,10 +21,12 @@ void main() async {
     // Continue app startup even if audio service fails to initialize
   }
 
-  runApp(MusifyApp());
+  runApp(const MusifyApp());
 }
 
 class MusifyApp extends StatefulWidget {
+  const MusifyApp({super.key});
+
   @override
   _MusifyAppState createState() => _MusifyAppState();
 }
@@ -70,22 +75,36 @@ class _MusifyAppState extends State<MusifyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Musify',
-      theme: ThemeData(
-        appBarTheme: AppBarTheme(
-          systemOverlayStyle: SystemUiOverlayStyle(
-            statusBarBrightness: Brightness.dark,
-          ),
+    return MultiProvider(
+      providers: [
+        /// AppStateProvider - Global app state, theme, preferences
+        ChangeNotifierProvider(
+          create: (_) => AppStateProvider(),
         ),
-        fontFamily: "DMSans",
-        colorScheme: ColorScheme.fromSeed(seedColor: accent),
-        primaryColor: accent,
-        canvasColor: Colors.transparent,
+
+        /// MusicPlayerProvider - Audio playback state and controls
+        ChangeNotifierProvider(
+          create: (_) => MusicPlayerProvider(),
+        ),
+
+        /// SearchProvider - Search state, results, and top songs
+        ChangeNotifierProvider(
+          create: (_) => SearchProvider(),
+        ),
+      ],
+      child: Consumer<AppStateProvider>(
+        builder: (context, appState, child) {
+          return MaterialApp(
+            title: 'Musify',
+            theme: appState.getLightThemeData(),
+            darkTheme: appState.getDarkThemeData(),
+            themeMode: appState.themeMode,
+            home: const Musify(),
+            builder: EasyLoading.init(),
+            debugShowCheckedModeBanner: false,
+          );
+        },
       ),
-      home: Musify(),
-      builder: EasyLoading.init(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
