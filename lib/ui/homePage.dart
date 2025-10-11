@@ -18,6 +18,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:path_provider/path_provider.dart';
 import 'package:Musify/API/saavn.dart';
 import 'package:Musify/music.dart' as music;
+import 'package:Musify/services/audio_player_service.dart';
 import 'package:Musify/style/appColors.dart';
 import 'package:Musify/ui/aboutPage.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -30,16 +31,54 @@ class Musify extends StatefulWidget {
 }
 
 class AppState extends State<Musify> {
+  late final AudioPlayerService _audioService;
   TextEditingController searchBar = TextEditingController();
   bool fetchingSongs = false;
+  PlayerState _currentPlayerState = PlayerState.stopped;
 
   void initState() {
     super.initState();
+
+    // Initialize audio service
+    _audioService = AudioPlayerService();
+    _initializeAudioService();
 
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       systemNavigationBarColor: Color(0xff1c252a),
       statusBarColor: Colors.transparent,
     ));
+  }
+
+  @override
+  void dispose() {
+    // AudioService is a singleton, so we don't dispose it here
+    // It will be managed by the service itself
+    super.dispose();
+  }
+
+  /// Initialize audio service and listen to state changes
+  void _initializeAudioService() async {
+    try {
+      if (!_audioService.isInitialized) {
+        await _audioService.initialize();
+      }
+
+      // Listen to player state changes for UI updates
+      _audioService.stateStream.listen((state) {
+        if (mounted) {
+          setState(() {
+            _currentPlayerState = state;
+          });
+        }
+      });
+
+      // Update current state
+      setState(() {
+        _currentPlayerState = _audioService.playerState;
+      });
+    } catch (e) {
+      debugPrint('❌ Failed to initialize audio service in HomePage: $e');
+    }
   }
 
   search() async {
@@ -434,29 +473,25 @@ class AppState extends State<Musify> {
                         ),
                         Spacer(),
                         IconButton(
-                          icon: music.playerState == PlayerState.playing
+                          icon: _currentPlayerState == PlayerState.playing
                               ? Icon(MdiIcons.pause)
                               : Icon(MdiIcons.playOutline),
                           color: accent,
                           splashColor: Colors.transparent,
                           onPressed: () async {
-                            setState(() {
-                              // Ensure audio player is initialized
-                              if (music.audioPlayer == null) {
-                                music.audioPlayer = AudioPlayer();
-                                music.playerState = PlayerState.stopped;
-                              }
-
-                              if (music.playerState == PlayerState.playing) {
-                                music.audioPlayer?.pause();
-                                music.playerState = PlayerState.paused;
-                              } else if (music.playerState ==
+                            try {
+                              if (_currentPlayerState == PlayerState.playing) {
+                                // Pause the current playback
+                                await _audioService.pause();
+                              } else if (_currentPlayerState ==
                                   PlayerState.paused) {
-                                // Check if kUrl is valid before playing
+                                // Resume playback
+                                await _audioService.resume();
+                              } else {
+                                // Start playing if stopped
                                 if (kUrl.isNotEmpty &&
                                     Uri.tryParse(kUrl) != null) {
-                                  music.audioPlayer?.play(UrlSource(kUrl));
-                                  music.playerState = PlayerState.playing;
+                                  await _audioService.play(kUrl);
                                 } else {
                                   // Show error message
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -466,25 +501,16 @@ class AppState extends State<Musify> {
                                     ),
                                   );
                                 }
-                              } 
-                              // else {
-                              //   // If stopped, start playing
-                              //   if (kUrl.isNotEmpty &&
-                              //       Uri.tryParse(kUrl) != null) {
-                              //     music.audioPlayer?.play(UrlSource(kUrl));
-                              //     music.playerState = PlayerState.playing;
-                              //   } else {
-                              //     // Show error message
-                              //     ScaffoldMessenger.of(context).showSnackBar(
-                              //       SnackBar(
-                              //         content: Text('Error: Invalid audio URL'),
-                              //         backgroundColor: Colors.red,
-                              //       ),
-                              //     );
-                              //   }
-                              // }
+                              }
+                            } catch (e) {
+                              debugPrint('❌ Audio control error: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Audio error: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             }
-                            );
                           },
                           iconSize: 45,
                         )
@@ -707,8 +733,8 @@ class AppState extends State<Musify> {
                                       MediaQuery.of(context).size.height * 0.22,
                                   child: ListView.builder(
                                     scrollDirection: Axis.horizontal,
-                                    itemCount:
-                                        min(15, (data.data as List?)?.length ?? 0),
+                                    itemCount: min(
+                                        15, (data.data as List?)?.length ?? 0),
                                     itemBuilder: (context, index) {
                                       final List? songList = data.data as List?;
                                       if (songList == null ||

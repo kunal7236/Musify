@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:Musify/helper/contact_widget.dart';
 import 'package:Musify/style/appColors.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class AboutPage extends StatelessWidget {
   @override
