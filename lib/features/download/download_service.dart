@@ -13,7 +13,6 @@ import 'package:Musify/API/saavn.dart' as saavn;
 class DownloadService {
   static Future<void> downloadSong(String id) async {
     String? filepath;
-    String? filepath2;
 
     // Check Android version and request appropriate permissions
     bool permissionGranted = false;
@@ -69,8 +68,6 @@ class DownloadService {
     try {
       final filename =
           saavn.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim() + ".m4a";
-      final artname = saavn.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim() +
-          "_artwork.jpg";
 
       // Use multiple fallback strategies for file storage
       Directory? musicDir;
@@ -126,10 +123,8 @@ class DownloadService {
       }
 
       filepath = "$dlPath/$filename";
-      filepath2 = "$dlPath/$artname";
 
       debugPrint('Audio path: $filepath');
-      debugPrint('Image path: $filepath2');
 
       // Check if file already exists
       bool fileExists = await File(filepath).exists();
@@ -153,16 +148,18 @@ class DownloadService {
       await File(filepath).writeAsBytes(bytes);
       debugPrint('✓ Audio file saved to: $filepath');
 
-      // Download and save album art
+      // Download artwork to memory (not saved to disk)
+      Uint8List? artworkBytes;
       if (saavn.image.isNotEmpty) {
         try {
-          debugPrint('Downloading image from: ${saavn.image}');
+          debugPrint('Downloading artwork from: ${saavn.image}');
           var imageRequest = await http.get(Uri.parse(saavn.image));
-          var imageBytes = imageRequest.bodyBytes;
-          await File(filepath2).writeAsBytes(imageBytes);
-          debugPrint('✓ Album art saved to: $filepath2');
+          artworkBytes = Uint8List.fromList(imageRequest.bodyBytes);
+          debugPrint(
+              '✓ Artwork downloaded to memory (${artworkBytes.length} bytes)');
         } catch (e) {
-          debugPrint('✗ Image download failed: $e');
+          debugPrint('✗ Artwork download failed: $e');
+          artworkBytes = null;
         }
       }
 
@@ -176,10 +173,10 @@ class DownloadService {
               saavn.artist.replaceAll("&quot;", "\"").replaceAll("&amp;", "&"),
           album:
               saavn.album.replaceAll("&quot;", "\"").replaceAll("&amp;", "&"),
-          pictures: await File(filepath2).exists()
+          pictures: artworkBytes != null
               ? [
                   Picture(
-                    bytes: await File(filepath2).readAsBytes(),
+                    bytes: artworkBytes,
                     mimeType: MimeType.jpeg,
                     pictureType: PictureType.coverFront,
                   ),
