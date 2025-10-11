@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:Musify/core/constants/app_colors.dart';
 
 class ContactCard extends StatelessWidget {
   final String name;
@@ -35,12 +36,13 @@ class ContactCard extends StatelessWidget {
       throw 'Could not launch $url';
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 6),
       child: Card(
-        color: const Color(0xff263238),
+        color: AppColors.backgroundSecondary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.0),
         ),

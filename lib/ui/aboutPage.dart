@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:Musify/helper/contact_widget.dart';
-import 'package:Musify/style/appColors.dart';
+import 'package:Musify/core/constants/app_colors.dart';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -10,15 +10,7 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xff384850),
-            Color(0xff263238),
-            Color(0xff263238),
-          ],
-        ),
+        gradient: AppColors.primaryGradient,
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -27,12 +19,9 @@ class AboutPage extends StatelessWidget {
           title: GradientText(
             "About",
             shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-            gradient: LinearGradient(colors: [
-              Color(0xff4db6ac),
-              Color(0xff61e88a),
-            ]),
+            gradient: AppColors.buttonGradient,
             style: TextStyle(
-              color: accent,
+              color: AppColors.accent,
               fontSize: 25,
               fontWeight: FontWeight.w700,
             ),
@@ -40,7 +29,7 @@ class AboutPage extends StatelessWidget {
           leading: IconButton(
             icon: Icon(
               Icons.arrow_back,
-              color: accent,
+              color: AppColors.accent,
             ),
             onPressed: () => Navigator.pop(context, false),
           ),
@@ -53,7 +42,7 @@ class AboutPage extends StatelessWidget {
         //   title: Text(
         //     "About",
         //     style: TextStyle(
-        //       color: accent,
+        //       color: AppColors.accent,
         //       fontSize: 25,
         //       fontWeight: FontWeight.w700,
         //     ),
@@ -61,7 +50,7 @@ class AboutPage extends StatelessWidget {
         //   leading: IconButton(
         //     icon: Icon(
         //       Icons.arrow_back,
-        //       color: accent,
+        //       color: AppColors.accent,
         //     ),
         //     onPressed: () => Navigator.pop(context, false),
         //   ),
@@ -102,7 +91,7 @@ class AboutCards extends StatelessWidget {
                       child: Text(
                         "Musify  | 2.1.0",
                         style: TextStyle(
-                            color: accentLight,
+                            color: AppColors.textSecondary,
                             fontSize: 24,
                             fontWeight: FontWeight.w600),
                       ),
@@ -118,7 +107,7 @@ class AboutCards extends StatelessWidget {
             imageUrl: 'https://telegram.im/img/harshv23',
             telegramUrl: 'https://telegram.dog/harshv23',
             xUrl: 'https://x.com/harshv23',
-            textColor: accentLight,
+            textColor: AppColors.textSecondary,
           ),
           ContactCard(
             name: 'Sumanjay',
@@ -126,7 +115,7 @@ class AboutCards extends StatelessWidget {
             imageUrl: 'https://telegra.ph/file/a64152b2fae1bf6e7d98e.jpg',
             telegramUrl: 'https://telegram.dog/cyberboysumanjay',
             xUrl: 'https://x.com/cyberboysj',
-            textColor: accentLight,
+            textColor: AppColors.textSecondary,
           ),
           ContactCard(
             name: 'Dhruvan Bhalara',
@@ -134,7 +123,7 @@ class AboutCards extends StatelessWidget {
             imageUrl: 'https://avatars1.githubusercontent.com/u/53393418?v=4',
             telegramUrl: 'https://t.me/dhruvanbhalara',
             xUrl: 'https://x.com/dhruvanbhalara',
-            textColor: accentLight,
+            textColor: AppColors.textSecondary,
           ),
           ContactCard(
             name: 'Kapil Jhajhria',
@@ -142,7 +131,7 @@ class AboutCards extends StatelessWidget {
             imageUrl: 'https://avatars3.githubusercontent.com/u/6892756?v=4',
             telegramUrl: 'https://telegram.dog/kapiljhajhria',
             xUrl: 'https://x.com/kapiljhajhria',
-            textColor: accentLight,
+            textColor: AppColors.textSecondary,
           ),
           ContactCard(
             name: 'Kunal Kashyap',
@@ -150,7 +139,7 @@ class AboutCards extends StatelessWidget {
             imageUrl: 'https://avatars.githubusercontent.com/u/118793083?v=4',
             telegramUrl: 'https://telegram.dog/NinjaApache',
             xUrl: 'https://x.com/KashyapK257',
-            textColor: accentLight,
+            textColor: AppColors.textSecondary,
           ),
         ],
       ),
