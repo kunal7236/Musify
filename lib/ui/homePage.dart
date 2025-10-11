@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 // import 'package:audiotagger/audiotagger.dart';  // Removed due to compatibility issues
 // import 'package:audiotagger/models/tag.dart';   // Removed due to compatibility issues
@@ -11,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
+import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:http/http.dart' as http;
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -385,7 +387,16 @@ class AppState extends State<Musify> {
                               MdiIcons.appleKeyboardControl,
                               size: 22,
                             ),
-                            onPressed: null,
+                            onPressed: () {
+                              checker = "Nahi";
+                              if (kUrl != "") {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => music.AudioApp()),
+                                );
+                              }
+                            },
                             disabledColor: accent,
                           ),
                         ),
@@ -428,7 +439,7 @@ class AppState extends State<Musify> {
                               : Icon(MdiIcons.playOutline),
                           color: accent,
                           splashColor: Colors.transparent,
-                          onPressed: () {
+                          onPressed: () async {
                             setState(() {
                               // Ensure audio player is initialized
                               if (music.audioPlayer == null) {
@@ -455,23 +466,25 @@ class AppState extends State<Musify> {
                                     ),
                                   );
                                 }
-                              } else {
-                                // If stopped, start playing
-                                if (kUrl.isNotEmpty &&
-                                    Uri.tryParse(kUrl) != null) {
-                                  music.audioPlayer?.play(UrlSource(kUrl));
-                                  music.playerState = PlayerState.playing;
-                                } else {
-                                  // Show error message
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error: Invalid audio URL'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              }
-                            });
+                              } 
+                              // else {
+                              //   // If stopped, start playing
+                              //   if (kUrl.isNotEmpty &&
+                              //       Uri.tryParse(kUrl) != null) {
+                              //     music.audioPlayer?.play(UrlSource(kUrl));
+                              //     music.playerState = PlayerState.playing;
+                              //   } else {
+                              //     // Show error message
+                              //     ScaffoldMessenger.of(context).showSnackBar(
+                              //       SnackBar(
+                              //         content: Text('Error: Invalid audio URL'),
+                              //         backgroundColor: Colors.red,
+                              //       ),
+                              //     );
+                              //   }
+                              // }
+                            }
+                            );
                           },
                           iconSize: 45,
                         )
@@ -492,17 +505,36 @@ class AppState extends State<Musify> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 42.0),
                       child: Center(
-                        child: Text(
+                        child: GradientText(
                           "Musify.",
+                          shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
+                          gradient: LinearGradient(colors: [
+                            Color(0xff4db6ac),
+                            Color(0xff61e88a),
+                          ]),
                           style: TextStyle(
                             fontSize: 35,
                             fontWeight: FontWeight.w800,
-                            color: accent,
                           ),
                         ),
                       ),
                     ),
                   ),
+                  // Expanded(
+                  //   child: Padding(
+                  //     padding: const EdgeInsets.only(left: 42.0),
+                  //     child: Center(
+                  //       child: Text(
+                  //         "Musify.",
+                  //         style: TextStyle(
+                  //           fontSize: 35,
+                  //           fontWeight: FontWeight.w800,
+                  //           color: accent,
+                  //         ),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   Container(
                     child: IconButton(
                       iconSize: 26,
@@ -676,7 +708,7 @@ class AppState extends State<Musify> {
                                   child: ListView.builder(
                                     scrollDirection: Axis.horizontal,
                                     itemCount:
-                                        (data.data as List?)?.length ?? 0,
+                                        min(15, (data.data as List?)?.length ?? 0),
                                     itemBuilder: (context, index) {
                                       final List? songList = data.data as List?;
                                       if (songList == null ||

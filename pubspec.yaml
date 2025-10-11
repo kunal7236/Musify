@@ -39,6 +39,7 @@ dependencies:
   # progress_dialog: ^1.2.4
   flutter_easyloading: ^3.0.5  # Replaced progress_dialog with flutter_easyloading
   # gradient_widgets: ^0.6.0  # Temporarily disabled due to TextTheme.button compatibility issue
+  gradient_widgets_plus: ^1.0.0
   material_design_icons_flutter: ^7.0.7296
   url_launcher: ^6.2.1
   permission_handler: ^11.0.1
@@ -72,8 +73,8 @@ flutter:
         - asset: fonts/DMSans-Medium.ttf
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/image.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

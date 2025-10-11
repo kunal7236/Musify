@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-// import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
+import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:Musify/helper/contact_widget.dart';
 import 'package:Musify/style/appColors.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class AboutPage extends StatelessWidget {
   @override
@@ -23,10 +22,14 @@ class AboutPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
-          systemOverlayStyle: SystemUiOverlayStyle.light,
           centerTitle: true,
-          title: Text(
+          title: GradientText(
             "About",
+            shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
+            gradient: LinearGradient(colors: [
+              Color(0xff4db6ac),
+              Color(0xff61e88a),
+            ]),
             style: TextStyle(
               color: accent,
               fontSize: 25,
@@ -43,6 +46,27 @@ class AboutPage extends StatelessWidget {
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
+        // appBar: AppBar(
+        //   systemOverlayStyle: SystemUiOverlayStyle.light,
+        //   centerTitle: true,
+        //   title: Text(
+        //     "About",
+        //     style: TextStyle(
+        //       color: accent,
+        //       fontSize: 25,
+        //       fontWeight: FontWeight.w700,
+        //     ),
+        //   ),
+        //   leading: IconButton(
+        //     icon: Icon(
+        //       Icons.arrow_back,
+        //       color: accent,
+        //     ),
+        //     onPressed: () => Navigator.pop(context, false),
+        //   ),
+        //   backgroundColor: Colors.transparent,
+        //   elevation: 0,
+        // ),
         body: SingleChildScrollView(child: AboutCards()),
       ),
     );
@@ -50,16 +74,6 @@ class AboutPage extends StatelessWidget {
 }
 
 class AboutCards extends StatelessWidget {
-  Future<void> launchOnTap(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(
-      uri,
-      mode: LaunchMode.platformDefault,
-    )) {
-      throw 'Could not launch $url';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -71,10 +85,14 @@ class AboutCards extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 ListTile(
-                  title: Image.network(
-                    "https://telegra.ph/file/4798f3a9303b8300e4b5b.png",
+                  title: Image.asset(
+                    "assets/image.png",
                     height: 120,
                   ),
+                  // title: Image.network(
+                  //   "https://telegra.ph/file/4798f3a9303b8300e4b5b.png",
+                  //   height: 120,
+                  // ),
                   subtitle: Padding(
                     padding: const EdgeInsets.all(13.0),
                     child: Center(
@@ -122,15 +140,15 @@ class AboutCards extends StatelessWidget {
             telegramUrl: 'https://telegram.dog/kapiljhajhria',
             xUrl: 'https://x.com/kapiljhajhria',
             textColor: accentLight,
-          ),  
-           ContactCard(
+          ),
+          ContactCard(
             name: 'Kunal Kashyap',
             subtitle: 'App Developer',
             imageUrl: 'https://avatars.githubusercontent.com/u/118793083?v=4',
             telegramUrl: 'https://telegram.dog/NinjaApache',
             xUrl: 'https://x.com/KashyapK257',
             textColor: accentLight,
-          ),                 
+          ),
         ],
       ),
     );

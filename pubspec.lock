@@ -264,6 +264,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.4"
+  gradient_widgets_plus:
+    dependency: "direct main"
+    description:
+      name: gradient_widgets_plus
+      sha256: "3de25d43c5b1de0cbb09bc293c47e5611750a7f02ece4ab0c8f2a3c5fd2773c6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   http:
     dependency: "direct main"
     description:

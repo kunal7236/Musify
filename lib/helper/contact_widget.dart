@@ -20,13 +20,21 @@ class ContactCard extends StatelessWidget {
     this.textColor = Colors.white,
   }) : super(key: key);
 
+  // Future<void> _launchOnTap(String url) async {
+  //   final Uri uri = Uri.parse(url);
+  //   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+  //     throw 'Could not launch $url';
+  //   }
+  // }
   Future<void> _launchOnTap(String url) async {
     final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.platformDefault,
+    )) {
       throw 'Could not launch $url';
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Padding(

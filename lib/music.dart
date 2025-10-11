@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-// import 'package:gradient_widgets/gradient_widgets.dart';  // Temporarily disabled
+import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:Musify/style/appColors.dart';
 
@@ -251,14 +251,33 @@ class AudioAppState extends State<AudioApp> {
           elevation: 0,
           //backgroundColor: Color(0xff384850),
           centerTitle: true,
-          title: Text(
+          title: GradientText(
             "Now Playing",
+            shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
+            gradient: LinearGradient(colors: [
+              Color(0xff4db6ac),
+              Color(0xff61e88a),
+            ]),
             style: TextStyle(
               color: accent,
               fontSize: 25,
               fontWeight: FontWeight.w700,
             ),
           ),
+
+          // AppBar(
+          //   backgroundColor: Colors.transparent,
+          //   elevation: 0,
+          //   //backgroundColor: Color(0xff384850),
+          //   centerTitle: true,
+          //   title: Text(
+          //     "Now Playing",
+          //     style: TextStyle(
+          //       color: accent,
+          //       fontSize: 25,
+          //       fontWeight: FontWeight.w700,
+          //     ),
+          //   ),
           leading: Padding(
             padding: const EdgeInsets.only(left: 14.0),
             child: IconButton(
@@ -294,15 +313,27 @@ class AudioAppState extends State<AudioApp> {
                   padding: const EdgeInsets.only(top: 35.0, bottom: 35),
                   child: Column(
                     children: <Widget>[
-                      Text(
+                      GradientText(
                         title,
+                        shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
+                        gradient: LinearGradient(colors: [
+                          Color(0xff4db6ac),
+                          Color(0xff61e88a),
+                        ]),
                         textScaleFactor: 2.5,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: accent),
+                            fontSize: 12, fontWeight: FontWeight.w700),
                       ),
+                      // Text(
+                      //   title,
+                      //   textScaler: TextScaler.linear(2.5),
+                      //   textAlign: TextAlign.center,
+                      //   style: TextStyle(
+                      //       fontSize: 12,
+                      //       fontWeight: FontWeight.w700,
+                      //       color: accent),
+                      // ),
                       Padding(
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
