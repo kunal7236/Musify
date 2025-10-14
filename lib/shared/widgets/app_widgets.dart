@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
-import 'skeleton_loader.dart';
 
 /// Reusable image widgets that eliminate code duplication
 /// Provides consistent image loading patterns across the app
@@ -32,15 +31,12 @@ class AppImageWidgets {
           memCacheHeight: AppConstants.imageCacheHeight,
           maxWidthDiskCache: AppConstants.imageCacheWidth,
           maxHeightDiskCache: AppConstants.imageCacheHeight,
-          filterQuality: FilterQuality.high,
-          placeholder: (context, url) => ShimmerWidget(
-            baseColor: Colors.black12,
-            highlightColor: Colors.black26,
-            child: Container(
-              width: width ?? AppConstants.albumArtSize,
-              height: height ?? AppConstants.albumArtSize,
-              color: Colors.black12,
-            ),
+          filterQuality: FilterQuality
+              .medium, // Changed from high to medium for better performance
+          placeholder: (context, url) => Container(
+            width: width ?? AppConstants.albumArtSize,
+            height: height ?? AppConstants.albumArtSize,
+            color: Colors.black12,
           ),
           errorWidget: (context, url, error) => Container(
             width: width ?? AppConstants.albumArtSize,
@@ -74,15 +70,12 @@ class AppImageWidgets {
           memCacheHeight: AppConstants.thumbnailCacheSize,
           maxWidthDiskCache: AppConstants.thumbnailCacheSize,
           maxHeightDiskCache: AppConstants.thumbnailCacheSize,
-          filterQuality: FilterQuality.high,
-          placeholder: (context, url) => ShimmerWidget(
-            baseColor: Colors.grey[800]!,
-            highlightColor: Colors.grey[600]!,
-            child: Container(
-              width: imageSize,
-              height: imageSize,
-              color: Colors.grey[800],
-            ),
+          filterQuality: FilterQuality
+              .low, // Low quality for thumbnails improves performance
+          placeholder: (context, url) => Container(
+            width: imageSize,
+            height: imageSize,
+            color: Colors.grey[800],
           ),
           errorWidget: (context, url, error) => Container(
             width: imageSize,

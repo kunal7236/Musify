@@ -157,22 +157,24 @@ class AppState extends State<Musify> {
             body: Column(
               children: <Widget>[
                 // Fixed header and search bar
-                Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      // Home header with logo and settings
-                      HomeHeader(
-                        searchController: searchBar,
-                        onClearSearch: clearSearch,
-                      ),
+                RepaintBoundary(
+                  child: Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Column(
+                      children: [
+                        // Home header with logo and settings
+                        HomeHeader(
+                          searchController: searchBar,
+                          onClearSearch: clearSearch,
+                        ),
 
-                      // Search bar
-                      SearchBarWidget(
-                        controller: searchBar,
-                        onSearch: search,
-                      ),
-                    ],
+                        // Search bar
+                        SearchBarWidget(
+                          controller: searchBar,
+                          onSearch: search,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -180,63 +182,7 @@ class AppState extends State<Musify> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Consumer<SearchProvider>(
-                      builder: (context, searchProvider, child) {
-                        // Show search results if there's a search query and results
-                        if (searchProvider.showSearchResults) {
-                          return custom_search.SearchResultsList(
-                            onSongTap: getSongDetails,
-                            onDownload: downloadSong,
-                            onLongPress: topSongs,
-                          );
-                        }
-                        // Show top songs if no search query
-                        else if (searchProvider.showTopSongs) {
-                          return TopSongsGrid(
-                            onSongTap: getSongDetails,
-                            onDownload: downloadSong,
-                          );
-                        }
-                        // Show loading indicator when searching or loading top songs
-                        else if (searchProvider.isSearching ||
-                            searchProvider.isLoadingTopSongs) {
-                          // Show skeleton grid for top songs loading
-                          if (searchProvider.isLoadingTopSongs) {
-                            return TopSongsGridSkeleton(itemCount: 6);
-                          }
-                          // Show search results skeleton for search
-                          else {
-                            return SearchResultsListSkeleton(itemCount: 5);
-                          }
-                        }
-                        // Default empty state
-                        else {
-                          return Container(
-                            height: 300,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.music_note,
-                                    size: 64,
-                                    color: AppColors.textSecondary,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Search for songs or browse top tracks',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-                      },
-                    ),
+                    child: _buildContent(searchProvider),
                   ),
                 ),
               ],
@@ -245,5 +191,61 @@ class AppState extends State<Musify> {
         },
       ),
     );
+  }
+
+  // Separate method to build content based on search state
+  Widget _buildContent(SearchProvider searchProvider) {
+    // Show search results if there's a search query and results
+    if (searchProvider.showSearchResults) {
+      return custom_search.SearchResultsList(
+        onSongTap: getSongDetails,
+        onDownload: downloadSong,
+        onLongPress: topSongs,
+      );
+    }
+    // Show top songs if no search query
+    else if (searchProvider.showTopSongs) {
+      return TopSongsGrid(
+        onSongTap: getSongDetails,
+        onDownload: downloadSong,
+      );
+    }
+    // Show skeleton loaders when loading (deferred to avoid initial frame skip)
+    else if (searchProvider.isSearching || searchProvider.isLoadingTopSongs) {
+      // Show skeleton grid for top songs loading
+      if (searchProvider.isLoadingTopSongs) {
+        return TopSongsGridSkeleton(itemCount: 6);
+      }
+      // Show search results skeleton for search
+      else {
+        return SearchResultsListSkeleton(itemCount: 5);
+      }
+    }
+    // Default empty state
+    else {
+      return Container(
+        height: 300,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.music_note,
+                size: 64,
+                color: AppColors.textSecondary,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Search for songs or browse top tracks',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }

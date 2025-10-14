@@ -66,31 +66,33 @@ class MusicPlayerLayout extends StatelessWidget {
                 ),
               ),
             ),
-            body: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 35.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Album Art
-                    MusicPlayerAlbumArt(
+            body: SafeArea(
+              child: Column(
+                children: [
+                  SizedBox(height: 35),
+
+                  // Album Art with fixed constraints
+                  Center(
+                    child: MusicPlayerAlbumArt(
                       imageUrl: songInfo['imageUrl']!,
                     ),
+                  ),
 
-                    // Song Info
-                    MusicPlayerSongInfo(
-                      title: songInfo['title']!,
-                      artist: songInfo['artist']!,
-                      album: songInfo['album']!,
-                    ),
+                  // Song Info
+                  MusicPlayerSongInfo(
+                    title: songInfo['title']!,
+                    artist: songInfo['artist']!,
+                    album: songInfo['album']!,
+                  ),
 
-                    // Player Controls
-                    Material(
-                      child: _buildPlayer(context, musicPlayer, appState),
-                    ),
-                  ],
-                ),
+                  // Spacer to push controls down
+                  Spacer(),
+
+                  // Player Controls
+                  Material(
+                    child: _buildPlayer(context, musicPlayer, appState),
+                  ),
+                ],
               ),
             ),
           ),

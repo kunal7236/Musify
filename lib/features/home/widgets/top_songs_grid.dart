@@ -57,109 +57,113 @@ class TopSongsGrid extends StatelessWidget {
                   childAspectRatio: 0.8, // Adjust for card proportions
                 ),
                 itemCount: searchProvider.topSongs.length,
+                addAutomaticKeepAlives: false,
+                addRepaintBoundaries: false, // We handle this manually
                 itemBuilder: (BuildContext context, int index) {
                   final song = searchProvider.topSongs[index];
-                  return Card(
-                    color: Colors.black12,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
-                    elevation: 2,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12.0),
-                      onTap: () {
-                        onSongTap(song.id, context);
-                      },
-                      splashColor: AppColors.accent,
-                      hoverColor: AppColors.accent,
-                      focusColor: AppColors.accent,
-                      highlightColor: AppColors.accent,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          // Album Art Image
-                          Expanded(
-                            flex: 3,
-                            child: Container(
-                              width: double.infinity,
-                              color: Colors
-                                  .black12, // Match the card background color
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(12.0),
-                                  topRight: Radius.circular(12.0),
-                                ),
-                                child: song.imageUrl.isNotEmpty
-                                    ? AppImageWidgets.albumArt(
-                                        imageUrl: song.imageUrl,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                      )
-                                    : Container(
-                                        color: AppColors.backgroundSecondary,
-                                        child: Center(
-                                          child: Icon(
-                                            MdiIcons.musicNoteOutline,
-                                            size: 40,
-                                            color: AppColors.accent,
+                  return RepaintBoundary(
+                    child: Card(
+                      color: Colors.black12,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      elevation: 2,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12.0),
+                        onTap: () {
+                          onSongTap(song.id, context);
+                        },
+                        splashColor: AppColors.accent,
+                        hoverColor: AppColors.accent,
+                        focusColor: AppColors.accent,
+                        highlightColor: AppColors.accent,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            // Album Art Image
+                            Expanded(
+                              flex: 3,
+                              child: Container(
+                                width: double.infinity,
+                                color: Colors
+                                    .black12, // Match the card background color
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(12.0),
+                                    topRight: Radius.circular(12.0),
+                                  ),
+                                  child: song.imageUrl.isNotEmpty
+                                      ? AppImageWidgets.albumArt(
+                                          imageUrl: song.imageUrl,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        )
+                                      : Container(
+                                          color: AppColors.backgroundSecondary,
+                                          child: Center(
+                                            child: Icon(
+                                              MdiIcons.musicNoteOutline,
+                                              size: 40,
+                                              color: AppColors.accent,
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                ),
                               ),
                             ),
-                          ),
-                          // Song Info
-                          Expanded(
-                            flex: 2,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    song.title
-                                        .split("(")[0]
-                                        .replaceAll("&quot;", "\"")
-                                        .replaceAll("&amp;", "&"),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    song.artist,
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Spacer(),
-                                  // Download button
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: IconButton(
-                                      color: AppColors.accent,
-                                      icon: Icon(
-                                        MdiIcons.downloadOutline,
-                                        size: 20,
+                            // Song Info
+                            Expanded(
+                              flex: 2,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      song.title
+                                          .split("(")[0]
+                                          .replaceAll("&quot;", "\"")
+                                          .replaceAll("&amp;", "&"),
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
                                       ),
-                                      onPressed: () => onDownload(song.id),
-                                      tooltip: 'Download',
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(height: 4),
+                                    Text(
+                                      song.artist,
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Spacer(),
+                                    // Download button
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: IconButton(
+                                        color: AppColors.accent,
+                                        icon: Icon(
+                                          MdiIcons.downloadOutline,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => onDownload(song.id),
+                                        tooltip: 'Download',
+                                        padding: EdgeInsets.zero,
+                                        constraints: BoxConstraints(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );

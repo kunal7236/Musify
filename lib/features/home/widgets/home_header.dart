@@ -24,55 +24,59 @@ class HomeHeader extends StatelessWidget {
         return Column(
           children: [
             Padding(padding: EdgeInsets.only(top: 30, bottom: 20.0)),
-            Center(
-              child: Row(
-                children: <Widget>[
-                  // Back button when showing search results
-                  if (searchProvider.showSearchResults)
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back,
-                        color: AppColors.accent,
-                        size: 28,
-                      ),
-                      onPressed: onClearSearch,
-                    )
-                  else
-                    SizedBox(
-                        width:
-                            48), // Placeholder to maintain consistent spacing
+            RepaintBoundary(
+              child: Center(
+                child: Row(
+                  children: <Widget>[
+                    // Back button when showing search results
+                    if (searchProvider.showSearchResults)
+                      IconButton(
+                        icon: Icon(
+                          Icons.arrow_back,
+                          color: AppColors.accent,
+                          size: 28,
+                        ),
+                        onPressed: onClearSearch,
+                      )
+                    else
+                      SizedBox(
+                          width:
+                              48), // Placeholder to maintain consistent spacing
 
-                  // Centered Musify text
-                  Expanded(
-                    child: Center(
-                      child: GradientText(
-                        "Musify.",
-                        shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
-                        gradient: AppColors.buttonGradient,
-                        style: TextStyle(
-                          fontSize: 35,
-                          fontWeight: FontWeight.w800,
+                    // Centered Musify text
+                    Expanded(
+                      child: Center(
+                        child: RepaintBoundary(
+                          child: GradientText(
+                            "Musify.",
+                            shaderRect: Rect.fromLTWH(13.0, 0.0, 100.0, 50.0),
+                            gradient: AppColors.buttonGradient,
+                            style: TextStyle(
+                              fontSize: 35,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
 
-                  // Settings button (always visible)
-                  IconButton(
-                    iconSize: 26,
-                    alignment: Alignment.center,
-                    icon: Icon(MdiIcons.dotsVertical),
-                    color: AppColors.accent,
-                    onPressed: () => {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AboutPage(),
+                    // Settings button (always visible)
+                    IconButton(
+                      iconSize: 26,
+                      alignment: Alignment.center,
+                      icon: Icon(MdiIcons.dotsVertical),
+                      color: AppColors.accent,
+                      onPressed: () => {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AboutPage(),
+                          ),
                         ),
-                      ),
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -38,8 +38,8 @@ class SearchProvider extends ChangeNotifier {
   /// Constructor
   SearchProvider() {
     // Delay top songs loading to avoid blocking UI during app startup
-    // Use a longer delay to let the UI render first
-    Future.delayed(const Duration(milliseconds: 500), () {
+    // Use 2 second delay to let the UI fully render and settle
+    Future.delayed(const Duration(milliseconds: 2000), () {
       _loadTopSongs();
     });
   }
