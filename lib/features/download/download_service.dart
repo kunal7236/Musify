@@ -19,7 +19,8 @@ class DownloadService {
 
     try {
       // For Android 13+ (API 33+), use media permissions
-      if (await Permission.audio.isDenied) {
+      // Check if permission is NOT granted (includes: denied, not determined, restricted, etc.)
+      if (!await Permission.audio.isGranted) {
         Map<Permission, PermissionStatus> statuses = await [
           Permission.audio,
           // Permission.manageExternalStorage,
