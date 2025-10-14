@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
-import 'package:audio_session/audio_session.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:Musify/main.dart' show audioHandler;
+import 'package:Musify/services/background_audio_handler.dart'
+    show createMediaItem;
 
-/// Singleton AudioPlayer service using just_audio for superior features
-/// Provides gapless playback, better buffering, and enhanced control
+/// Singleton AudioPlayer service using audio_service for background playback
+/// Provides gapless playback, better buffering, enhanced control, and background audio
 class AudioPlayerService {
   // Singleton pattern implementation
   static final AudioPlayerService _instance = AudioPlayerService._internal();
@@ -15,7 +18,6 @@ class AudioPlayerService {
   AudioPlayer? _audioPlayer;
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
-  StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<int?>? _currentIndexSubscription;
 
   // State management
@@ -62,7 +64,9 @@ class AudioPlayerService {
         return;
       }
 
-      await _createAudioPlayer();
+      // Set up stream listeners from audio handler
+      _setupStreamListenersFromHandler();
+
       _isInitialized = true;
       debugPrint('✅ AudioPlayerService initialized successfully');
     } catch (e) {
@@ -71,48 +75,69 @@ class AudioPlayerService {
     }
   }
 
-  /// Create a new AudioPlayer instance with proper configuration
-  Future<void> _createAudioPlayer() async {
+  /// Set up stream listeners from audio handler
+  void _setupStreamListenersFromHandler() {
     try {
-      // Dispose previous instance if exists
-      await _disposeCurrentPlayer();
+      // Listen to playback state from audio handler
+      audioHandler.playbackState.listen(
+        (PlaybackState state) {
+          // Map audio_service AudioProcessingState to just_audio ProcessingState
+          ProcessingState processingState;
+          switch (state.processingState) {
+            case AudioProcessingState.idle:
+              processingState = ProcessingState.idle;
+              break;
+            case AudioProcessingState.loading:
+              processingState = ProcessingState.loading;
+              break;
+            case AudioProcessingState.buffering:
+              processingState = ProcessingState.buffering;
+              break;
+            case AudioProcessingState.ready:
+              processingState = ProcessingState.ready;
+              break;
+            case AudioProcessingState.completed:
+              processingState = ProcessingState.completed;
+              break;
+            case AudioProcessingState.error:
+              processingState = ProcessingState.idle;
+              if (state.errorMessage != null) {
+                _handleError('Playback error: ${state.errorMessage}');
+              }
+              break;
+            default:
+              processingState = ProcessingState.idle;
+          }
 
-      // Configure audio session for proper background playback and audio focus
-      final session = await AudioSession.instance;
-      await session.configure(const AudioSessionConfiguration.music());
+          // Only broadcast if state actually changed
+          final newState = PlayerState(state.playing, processingState);
+          if (newState.playing != _playerState.playing ||
+              newState.processingState != _playerState.processingState) {
+            _playerState = newState;
+            _stateController.add(_playerState);
+            debugPrint(
+                '🎵 State changed: playing=${state.playing}, processingState=$processingState');
+          }
+        },
+        onError: (error) {
+          debugPrint('❌ Playback state stream error: $error');
+          _handleError('Player state error: $error');
+        },
+      );
 
-      // Create new player instance
-      _audioPlayer = AudioPlayer();
-
-      // Set up stream subscriptions with proper error handling
-      _setupStreamSubscriptions();
-
-      debugPrint('✅ New AudioPlayer instance created and configured');
-    } catch (e) {
-      debugPrint('❌ Failed to create AudioPlayer: $e');
-      throw Exception('AudioPlayer creation failed: $e');
-    }
-  }
-
-  /// Set up stream subscriptions for player events
-  void _setupStreamSubscriptions() {
-    try {
-      if (_audioPlayer == null) return;
-
-      // Position updates
-      _positionSubscription = _audioPlayer!.positionStream.listen(
+      // Get position updates from audio handler's player
+      _positionSubscription = audioHandler.audioPlayer.positionStream.listen(
         (Duration position) {
           _position = position;
           _positionController.add(position);
         },
         onError: (error) {
           debugPrint('❌ Position stream error: $error');
-          _handleError('Position tracking error: $error');
         },
       );
 
-      // Duration updates
-      _durationSubscription = _audioPlayer!.durationStream.listen(
+      // Get duration updates from audio handler's player
+      _durationSubscription = audioHandler.audioPlayer.durationStream.listen(
         (Duration? duration) {
           if (duration != null) {
             _duration = duration;
@@ -121,27 +146,6 @@ class AudioPlayerService {
         },
         onError: (error) {
           debugPrint('❌ Duration stream error: $error');
-          _handleError('Duration tracking error: $error');
-        },
-      );
-
-      // Player state changes (combines playing state and processing state)
-      _playerStateSubscription = _audioPlayer!.playerStateStream.listen(
-        (PlayerState state) {
-          _playerState = state;
-          _stateController.add(state);
-
-          debugPrint(
-              '🎵 Player state changed: playing=${state.playing}, processingState=${state.processingState}');
-
-          // Handle completion
-          if (state.processingState == ProcessingState.completed) {
-            _handleCompletion();
-          }
-        },
-        onError: (error) {
-          debugPrint('❌ Player state stream error: $error');
-          _handleError('Player state error: $error');
         },
       );
 
@@ -153,14 +157,17 @@ class AudioPlayerService {
   }
 
   /// Play audio from URL with proper error handling and retry logic
-  Future<bool> play(String url) async {
+  Future<bool> play(
+    String url, {
+    String? title,
+    String? artist,
+    String? album,
+    String? artworkUrl,
+    String? songId,
+  }) async {
     try {
       if (!_isInitialized) {
         await initialize();
-      }
-
-      if (_audioPlayer == null) {
-        throw Exception('AudioPlayer not initialized');
       }
 
       // Validate URL
@@ -173,9 +180,19 @@ class AudioPlayerService {
       // Update current URL
       _currentUrl = url;
 
-      // Start playback with retry logic
-      await _playWithRetry(url);
+      // Create media item for notification
+      final mediaItem = createMediaItem(
+        id: songId ?? url,
+        title: title ?? 'Unknown Title',
+        artist: artist ?? 'Unknown Artist',
+        album: album ?? '',
+        artUri: artworkUrl,
+      );
 
+      // Play through audio handler for background support
+      await audioHandler.playFromUrl(url, mediaItem);
+
+      debugPrint('✅ Playback started with background support');
       return true;
     } catch (e) {
       debugPrint('❌ Play failed: $e');
@@ -184,43 +201,10 @@ class AudioPlayerService {
     }
   }
 
-  /// Play with retry logic for better reliability
-  Future<void> _playWithRetry(String url, [int retryCount = 0]) async {
-    const int maxRetries = 3;
-    const Duration retryDelay = Duration(milliseconds: 500);
-
-    try {
-      // Set audio source and play
-      await _audioPlayer!.setUrl(url);
-      await _audioPlayer!.play();
-      debugPrint('✅ Playback started successfully');
-    } catch (e) {
-      if (retryCount < maxRetries) {
-        debugPrint('🔄 Retry ${retryCount + 1}/$maxRetries after error: $e');
-        await Future.delayed(retryDelay);
-
-        // Recreate player if it seems to be in a bad state
-        if (e.toString().contains('disposed') ||
-            e.toString().contains('created')) {
-          await _createAudioPlayer();
-        }
-
-        await _playWithRetry(url, retryCount + 1);
-      } else {
-        throw Exception('Playback failed after $maxRetries attempts: $e');
-      }
-    }
-  }
-
   /// Pause playback
   Future<bool> pause() async {
     try {
-      if (_audioPlayer == null || !isPlaying) {
-        debugPrint('⚠️ Cannot pause: player not playing');
-        return false;
-      }
-
-      await _audioPlayer!.pause();
+      await audioHandler.pause();
       debugPrint('⏸️ Playback paused');
       return true;
     } catch (e) {
@@ -233,13 +217,7 @@ class AudioPlayerService {
   /// Resume playback
   Future<bool> resume() async {
     try {
-      if (_audioPlayer == null || isPlaying) {
-        debugPrint(
-            '⚠️ Cannot resume: player already playing or not initialized');
-        return false;
-      }
-
-      await _audioPlayer!.play();
+      await audioHandler.play();
       debugPrint('▶️ Playback resumed');
       return true;
     } catch (e) {
@@ -252,12 +230,7 @@ class AudioPlayerService {
   /// Stop playback and reset position
   Future<bool> stop() async {
     try {
-      if (_audioPlayer == null) {
-        debugPrint('⚠️ Cannot stop: player not initialized');
-        return false;
-      }
-
-      await _audioPlayer!.stop();
+      await audioHandler.stop();
       _position = Duration.zero;
       _positionController.add(_position);
       debugPrint('⏹️ Playback stopped');
@@ -272,18 +245,13 @@ class AudioPlayerService {
   /// Seek to specific position
   Future<bool> seek(Duration position) async {
     try {
-      if (_audioPlayer == null) {
-        debugPrint('⚠️ Cannot seek: player not initialized');
-        return false;
-      }
-
       // Validate position
       if (position.isNegative || position > _duration) {
         debugPrint('⚠️ Invalid seek position: $position');
         return false;
       }
 
-      await _audioPlayer!.seek(position);
+      await audioHandler.seek(position);
       debugPrint('🎯 Seeked to: $position');
       return true;
     } catch (e) {
@@ -296,15 +264,10 @@ class AudioPlayerService {
   /// Set volume (0.0 to 1.0)
   Future<bool> setVolume(double volume) async {
     try {
-      if (_audioPlayer == null) {
-        debugPrint('⚠️ Cannot set volume: player not initialized');
-        return false;
-      }
-
       // Clamp volume to valid range
       volume = volume.clamp(0.0, 1.0);
 
-      await _audioPlayer!.setVolume(volume);
+      await audioHandler.setVolume(volume);
       debugPrint('🔊 Volume set to: $volume');
       return true;
     } catch (e) {
@@ -312,13 +275,6 @@ class AudioPlayerService {
       _handleError('Volume adjustment failed: $e');
       return false;
     }
-  }
-
-  /// Handle playback completion
-  void _handleCompletion() {
-    debugPrint('🏁 Playback completed');
-    _position = _duration;
-    _positionController.add(_position);
   }
 
   /// Handle errors and emit them to UI
@@ -333,13 +289,11 @@ class AudioPlayerService {
       // Cancel all subscriptions
       await _positionSubscription?.cancel();
       await _durationSubscription?.cancel();
-      await _playerStateSubscription?.cancel();
       await _currentIndexSubscription?.cancel();
 
       // Clear subscriptions
       _positionSubscription = null;
       _durationSubscription = null;
-      _playerStateSubscription = null;
       _currentIndexSubscription = null;
 
       // Dispose audio player
@@ -389,16 +343,4 @@ class AudioPlayerService {
   /// Get current player instance (for advanced use cases)
   /// Use with caution - prefer using service methods
   AudioPlayer? get audioPlayer => _audioPlayer;
-
-  /// Force recreate player (for error recovery)
-  Future<void> recreatePlayer() async {
-    try {
-      debugPrint('🔄 Recreating AudioPlayer...');
-      await _createAudioPlayer();
-      debugPrint('✅ AudioPlayer recreated successfully');
-    } catch (e) {
-      debugPrint('❌ Failed to recreate AudioPlayer: $e');
-      _handleError('Player recreation failed: $e');
-    }
-  }
 }

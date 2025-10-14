@@ -28,7 +28,8 @@ class MusicPlayerProvider extends ChangeNotifier {
   /// Constructor
   MusicPlayerProvider() {
     _audioService = AudioPlayerService();
-    _initializeService();
+    // Delay initialization to avoid race condition with JustAudioBackground.init()
+    Future.microtask(() => _initializeService());
   }
 
   // Public getters
@@ -133,8 +134,8 @@ class MusicPlayerProvider extends ChangeNotifier {
     try {
       debugPrint('🎵 Playing song: ${song.title} by ${song.artist}');
 
-      // Set loading state
-      _playbackState = PlaybackState.loading;
+      // Update current song and clear error (but don't manually set loading state)
+      // Let the audio service stream handle state updates automatically
       _currentSong = song;
       _clearError();
       notifyListeners();
@@ -144,8 +145,15 @@ class MusicPlayerProvider extends ChangeNotifier {
         throw Exception('Invalid audio URL for song: ${song.title}');
       }
 
-      // Play the song using audio service
-      final success = await _audioService.play(song.audioUrl);
+      // Play the song using audio service with metadata for background playback
+      final success = await _audioService.play(
+        song.audioUrl,
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        artworkUrl: song.imageUrl,
+        songId: song.id,
+      );
 
       if (!success) {
         throw Exception('Failed to start playback');

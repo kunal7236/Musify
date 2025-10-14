@@ -1,24 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:audio_service/audio_service.dart';
 
 import 'package:Musify/ui/homePage.dart';
 import 'package:Musify/services/audio_player_service.dart';
+import 'package:Musify/services/background_audio_handler.dart';
 import 'package:Musify/providers/music_player_provider.dart';
 import 'package:Musify/providers/search_provider.dart';
 import 'package:Musify/providers/app_state_provider.dart';
 
+// Global audio handler instance
+late MusifyAudioHandler audioHandler;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize the AudioPlayerService at app startup for optimal performance
+  // Initialize audio_service with custom handler
+  debugPrint('🎵 Initializing audio_service...');
   try {
-    final audioService = AudioPlayerService();
-    await audioService.initialize();
-    debugPrint('✅ AudioPlayerService initialized at app startup');
+    audioHandler = await AudioService.init(
+      builder: () => MusifyAudioHandler(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.gokadzev.musify.channel.audio',
+        androidNotificationChannelName: 'Musify Audio',
+        androidNotificationChannelDescription: 'Music playback controls',
+        androidStopForegroundOnPause:
+            false, // Don't stop service when paused - allows background playback
+        androidNotificationIcon: 'mipmap/ic_launcher',
+      ),
+    );
+    debugPrint('✅ audio_service initialized successfully');
   } catch (e) {
-    debugPrint('⚠️ Failed to initialize AudioPlayerService at startup: $e');
-    // Continue app startup even if audio service fails to initialize
+    debugPrint('⚠️ Failed to initialize audio_service: $e');
+    debugPrint('⚠️ Background playback will not be available');
   }
 
   runApp(const MusifyApp());
@@ -53,14 +68,11 @@ class _MusifyAppState extends State<MusifyApp> with WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.paused:
-        // App is in background - pause audio if playing
-        if (_audioService.isPlaying) {
-          _audioService.pause();
-          debugPrint('🎵 Audio paused - app backgrounded');
-        }
+        // App is in background - audio_service handles background playback
+        debugPrint('🎵 App backgrounded - audio continues via audio_service');
         break;
       case AppLifecycleState.resumed:
-        // App is back in foreground - audio will be controlled by user
+        // App is back in foreground
         debugPrint('🎵 App resumed - audio ready');
         break;
       case AppLifecycleState.detached:
