@@ -81,6 +81,12 @@ class PlayerProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Clamp position to duration to prevent slider errors when song completes
+    final clampedPosition = position.inMilliseconds.toDouble().clamp(
+          0.0,
+          duration.inMilliseconds.toDouble(),
+        );
+
     return Column(
       children: [
         SliderTheme(
@@ -90,7 +96,7 @@ class PlayerProgressBar extends StatelessWidget {
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
           ),
           child: Slider(
-            value: position.inMilliseconds.toDouble(),
+            value: clampedPosition,
             onChanged: onChanged,
             min: 0.0,
             max: duration.inMilliseconds.toDouble(),

@@ -55,9 +55,12 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
     // Listen to position changes
     _positionSubscription = _audioPlayer.positionStream.listen(
       (position) {
-        playbackState.add(playbackState.value.copyWith(
-          updatePosition: position,
-        ));
+        // Don't update position if song is completed
+        if (_audioPlayer.processingState != ProcessingState.completed) {
+          playbackState.add(playbackState.value.copyWith(
+            updatePosition: position,
+          ));
+        }
       },
       onError: (error) {
         debugPrint('❌ Position stream error: $error');
@@ -83,9 +86,14 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
     final processingState = _mapProcessingState(playerState.processingState);
     final playing = playerState.playing;
 
+    // When song completes, set position to duration to stop slider movement
+    final position = playerState.processingState == ProcessingState.completed
+        ? (_audioPlayer.duration ?? _audioPlayer.position)
+        : _audioPlayer.position;
+
     playbackState.add(
       PlaybackState(
-        controls: _getControls(playing),
+        controls: _getControls(playing, playerState.processingState),
         androidCompactActionIndices: const [0, 1, 2],
         systemActions: const {
           MediaAction.seek,
@@ -94,7 +102,7 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
         },
         processingState: processingState,
         playing: playing,
-        updatePosition: _audioPlayer.position,
+        updatePosition: position,
         bufferedPosition: _audioPlayer.bufferedPosition,
         speed: _audioPlayer.speed,
       ),
@@ -120,14 +128,18 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   /// Get media controls based on current state
-  List<MediaControl> _getControls(bool playing) {
+  List<MediaControl> _getControls(
+      bool playing, ProcessingState processingState) {
+    // When song completes, show play button (not pause)
+    final isCompleted = processingState == ProcessingState.completed;
+
     return [
       const MediaControl(
         androidIcon: 'drawable/ic_action_skip_previous',
         label: 'Previous',
         action: MediaAction.skipToPrevious,
       ),
-      if (playing)
+      if (playing && !isCompleted)
         const MediaControl(
           androidIcon: 'drawable/ic_action_pause',
           label: 'Pause',
@@ -196,7 +208,7 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
       // Update playback state to stopped
       playbackState.add(
         PlaybackState(
-          controls: _getControls(false),
+          controls: _getControls(false, ProcessingState.idle),
           processingState: AudioProcessingState.idle,
           playing: false,
         ),
