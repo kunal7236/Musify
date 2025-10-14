@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:Musify/models/app_models.dart';
 import 'package:Musify/services/audio_player_service.dart';
 
@@ -269,19 +269,20 @@ class MusicPlayerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Map AudioPlayer PlayerState to our PlaybackState
+  /// Map just_audio PlayerState to our PlaybackState
   PlaybackState _mapPlayerState(PlayerState playerState) {
-    switch (playerState) {
-      case PlayerState.playing:
-        return PlaybackState.playing;
-      case PlayerState.paused:
-        return PlaybackState.paused;
-      case PlayerState.stopped:
-        return PlaybackState.stopped;
-      case PlayerState.completed:
-        return PlaybackState.completed;
-      default:
-        return PlaybackState.stopped;
+    // just_audio PlayerState has: playing (bool) and processingState (ProcessingState enum)
+    if (playerState.processingState == ProcessingState.loading ||
+        playerState.processingState == ProcessingState.buffering) {
+      return PlaybackState.loading;
+    } else if (playerState.processingState == ProcessingState.completed) {
+      return PlaybackState.completed;
+    } else if (playerState.playing) {
+      return PlaybackState.playing;
+    } else if (playerState.processingState == ProcessingState.ready) {
+      return PlaybackState.paused;
+    } else {
+      return PlaybackState.stopped;
     }
   }
 

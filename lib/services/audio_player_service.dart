@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 
-/// Singleton AudioPlayer service following industry standards for memory management
-/// and performance optimization. Prevents memory leaks and ensures proper resource cleanup.
+/// Singleton AudioPlayer service using just_audio for superior features
+/// Provides gapless playback, better buffering, and enhanced control
 class AudioPlayerService {
   // Singleton pattern implementation
   static final AudioPlayerService _instance = AudioPlayerService._internal();
@@ -13,12 +14,12 @@ class AudioPlayerService {
   // Private fields
   AudioPlayer? _audioPlayer;
   StreamSubscription<Duration>? _positionSubscription;
-  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
-  StreamSubscription<void>? _completionSubscription;
+  StreamSubscription<int?>? _currentIndexSubscription;
 
   // State management
-  PlayerState _playerState = PlayerState.stopped;
+  PlayerState _playerState = PlayerState(false, ProcessingState.idle);
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   String _currentUrl = "";
@@ -40,9 +41,11 @@ class AudioPlayerService {
   Duration get position => _position;
   String get currentUrl => _currentUrl;
   bool get isInitialized => _isInitialized;
-  bool get isPlaying => _playerState == PlayerState.playing;
-  bool get isPaused => _playerState == PlayerState.paused;
-  bool get isStopped => _playerState == PlayerState.stopped;
+  bool get isPlaying => _playerState.playing;
+  bool get isPaused =>
+      !_playerState.playing &&
+      _playerState.processingState != ProcessingState.idle;
+  bool get isStopped => _playerState.processingState == ProcessingState.idle;
 
   // Public streams for UI updates
   Stream<PlayerState> get stateStream => _stateController.stream;
@@ -74,12 +77,12 @@ class AudioPlayerService {
       // Dispose previous instance if exists
       await _disposeCurrentPlayer();
 
+      // Configure audio session for proper background playback and audio focus
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration.music());
+
       // Create new player instance
       _audioPlayer = AudioPlayer();
-
-      // Configure player for optimal performance
-      await _audioPlayer!.setReleaseMode(ReleaseMode.stop);
-      await _audioPlayer!.setPlayerMode(PlayerMode.mediaPlayer);
 
       // Set up stream subscriptions with proper error handling
       _setupStreamSubscriptions();
@@ -97,7 +100,7 @@ class AudioPlayerService {
       if (_audioPlayer == null) return;
 
       // Position updates
-      _positionSubscription = _audioPlayer!.onPositionChanged.listen(
+      _positionSubscription = _audioPlayer!.positionStream.listen(
         (Duration position) {
           _position = position;
           _positionController.add(position);
@@ -109,10 +112,12 @@ class AudioPlayerService {
       );
 
       // Duration updates
-      _durationSubscription = _audioPlayer!.onDurationChanged.listen(
-        (Duration duration) {
-          _duration = duration;
-          _durationController.add(duration);
+      _durationSubscription = _audioPlayer!.durationStream.listen(
+        (Duration? duration) {
+          if (duration != null) {
+            _duration = duration;
+            _durationController.add(duration);
+          }
         },
         onError: (error) {
           debugPrint('❌ Duration stream error: $error');
@@ -120,16 +125,17 @@ class AudioPlayerService {
         },
       );
 
-      // Player state changes
-      _playerStateSubscription = _audioPlayer!.onPlayerStateChanged.listen(
+      // Player state changes (combines playing state and processing state)
+      _playerStateSubscription = _audioPlayer!.playerStateStream.listen(
         (PlayerState state) {
           _playerState = state;
           _stateController.add(state);
 
-          debugPrint('🎵 Player state changed: $state');
+          debugPrint(
+              '🎵 Player state changed: playing=${state.playing}, processingState=${state.processingState}');
 
           // Handle completion
-          if (state == PlayerState.completed) {
+          if (state.processingState == ProcessingState.completed) {
             _handleCompletion();
           }
         },
@@ -164,11 +170,6 @@ class AudioPlayerService {
 
       debugPrint('🎵 Playing: $url');
 
-      // Stop current playback if any
-      if (_playerState == PlayerState.playing) {
-        await _audioPlayer!.stop();
-      }
-
       // Update current URL
       _currentUrl = url;
 
@@ -189,7 +190,9 @@ class AudioPlayerService {
     const Duration retryDelay = Duration(milliseconds: 500);
 
     try {
-      await _audioPlayer!.play(UrlSource(url));
+      // Set audio source and play
+      await _audioPlayer!.setUrl(url);
+      await _audioPlayer!.play();
       debugPrint('✅ Playback started successfully');
     } catch (e) {
       if (retryCount < maxRetries) {
@@ -230,12 +233,13 @@ class AudioPlayerService {
   /// Resume playback
   Future<bool> resume() async {
     try {
-      if (_audioPlayer == null || !isPaused) {
-        debugPrint('⚠️ Cannot resume: player not paused');
+      if (_audioPlayer == null || isPlaying) {
+        debugPrint(
+            '⚠️ Cannot resume: player already playing or not initialized');
         return false;
       }
 
-      await _audioPlayer!.resume();
+      await _audioPlayer!.play();
       debugPrint('▶️ Playback resumed');
       return true;
     } catch (e) {
@@ -315,9 +319,6 @@ class AudioPlayerService {
     debugPrint('🏁 Playback completed');
     _position = _duration;
     _positionController.add(_position);
-    // Reset state to stopped
-    _playerState = PlayerState.stopped;
-    _stateController.add(_playerState);
   }
 
   /// Handle errors and emit them to UI
@@ -333,13 +334,13 @@ class AudioPlayerService {
       await _positionSubscription?.cancel();
       await _durationSubscription?.cancel();
       await _playerStateSubscription?.cancel();
-      await _completionSubscription?.cancel();
+      await _currentIndexSubscription?.cancel();
 
       // Clear subscriptions
       _positionSubscription = null;
       _durationSubscription = null;
       _playerStateSubscription = null;
-      _completionSubscription = null;
+      _currentIndexSubscription = null;
 
       // Dispose audio player
       if (_audioPlayer != null) {
@@ -373,7 +374,7 @@ class AudioPlayerService {
       await _errorController.close();
 
       // Reset state
-      _playerState = PlayerState.stopped;
+      _playerState = PlayerState(false, ProcessingState.idle);
       _duration = Duration.zero;
       _position = Duration.zero;
       _currentUrl = "";

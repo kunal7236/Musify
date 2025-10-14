@@ -3,6 +3,20 @@ import 'package:flutter/foundation.dart';
 import 'package:Musify/models/app_models.dart';
 import 'package:Musify/API/saavn.dart' as saavn_api;
 
+/// Helper function to parse search results in background isolate
+List<Song> _parseSearchResults(List<dynamic> rawResults) {
+  return rawResults
+      .map((json) => Song.fromSearchResult(json as Map<String, dynamic>))
+      .toList();
+}
+
+/// Helper function to parse top songs in background isolate
+List<Song> _parseTopSongs(List<dynamic> rawSongs) {
+  return rawSongs
+      .map((json) => Song.fromTopSong(json as Map<String, dynamic>))
+      .toList();
+}
+
 /// SearchProvider following industry standards for state management
 /// Manages search state, results, loading states, and top songs
 /// Uses Provider pattern with ChangeNotifier for reactive UI updates
@@ -23,7 +37,9 @@ class SearchProvider extends ChangeNotifier {
 
   /// Constructor
   SearchProvider() {
-    _loadTopSongs();
+    // Schedule top songs loading after the provider is fully initialized
+    // This prevents blocking the main thread during app startup
+    Future.microtask(() => _loadTopSongs());
   }
 
   // Public getters
@@ -79,11 +95,11 @@ class SearchProvider extends ChangeNotifier {
       // Call the existing API function
       List<dynamic> rawResults = await saavn_api.fetchSongsList(query);
 
-      // Convert to Song objects
-      List<Song> songs = rawResults
-          .take(_maxSearchResults)
-          .map((json) => Song.fromSearchResult(json))
-          .toList();
+      // Parse JSON in background isolate to avoid blocking UI
+      List<Song> songs = await compute(
+        _parseSearchResults,
+        rawResults.take(_maxSearchResults).toList(),
+      );
 
       // Update state
       _searchResults = songs;
@@ -111,9 +127,8 @@ class SearchProvider extends ChangeNotifier {
       // Call the existing API function
       List<dynamic> rawTopSongs = await saavn_api.topSongs();
 
-      // Convert to Song objects
-      List<Song> songs =
-          rawTopSongs.map((json) => Song.fromTopSong(json)).toList();
+      // Parse JSON in background isolate to avoid blocking UI
+      List<Song> songs = await compute(_parseTopSongs, rawTopSongs);
 
       // Update state
       _topSongs = songs;

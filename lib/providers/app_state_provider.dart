@@ -31,7 +31,8 @@ class AppStateProvider extends ChangeNotifier {
 
   /// Constructor
   AppStateProvider() {
-    _loadPreferences();
+    // Load preferences asynchronously to avoid blocking UI
+    Future.microtask(() => _loadPreferences());
   }
 
   // Public getters

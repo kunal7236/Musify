@@ -21,9 +21,13 @@
 -keep class io.flutter.plugins.** { *; }
 -dontwarn io.flutter.embedding.**
 
-# AudioPlayers plugin
--keep class xyz.luan.audioplayers.** { *; }
--dontwarn xyz.luan.audioplayers.**
+# just_audio plugin
+-keep class com.ryanheise.just_audio.** { *; }
+-dontwarn com.ryanheise.just_audio.**
+
+# ExoPlayer (used by just_audio)
+-keep class com.google.android.exoplayer2.** { *; }
+-dontwarn com.google.android.exoplayer2.**
 
 # HTTP and networking
 -keep class okhttp3.** { *; }
