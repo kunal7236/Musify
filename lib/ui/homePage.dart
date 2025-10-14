@@ -56,14 +56,17 @@ class AppState extends State<Musify> {
 
   // Get song details and play
   Future<void> getSongDetails(String id, var context) async {
-    final searchProvider = Provider.of<SearchProvider>(context, listen: false);
-    final musicPlayer =
-        Provider.of<MusicPlayerProvider>(context, listen: false);
-
-    // Show loading indicator
-    EasyLoading.show(status: 'Loading song...');
-
     try {
+      debugPrint('🎵 getSongDetails called with ID: $id');
+
+      final searchProvider =
+          Provider.of<SearchProvider>(context, listen: false);
+      final musicPlayer =
+          Provider.of<MusicPlayerProvider>(context, listen: false);
+
+      // Show loading indicator while fetching song details
+      EasyLoading.show(status: 'Loading song...');
+
       // Get song details with audio URL
       Song? song = await searchProvider.searchAndPrepareSong(id);
 
@@ -71,18 +74,42 @@ class AppState extends State<Musify> {
         throw Exception('Song not found or unable to get audio URL');
       }
 
-      // Set current song and start playing
-      await musicPlayer.playSong(song);
+      debugPrint('✅ Song details fetched successfully');
 
+      // Dismiss loading before starting playback
+      // The bottom player will show loading state during playback initialization
       EasyLoading.dismiss();
+      debugPrint('✅ EasyLoading dismissed');
 
-      // Navigate to music player
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const music.AudioApp(),
-        ),
-      );
+      // Set current song and start playing
+      // DON'T await - let playback happen in background
+      // The playSong method sets loading state immediately for UI feedback
+      musicPlayer.playSong(song);
+
+      debugPrint('🎵 Song playback initiated, navigating to player...');
+
+      // Small delay to ensure EasyLoading is fully dismissed and playSong sets state
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      // Navigate to music player immediately
+      // Don't wait for playback to start - the player screen will show loading state
+      if (context.mounted) {
+        debugPrint('🎵 Context mounted, pushing music player route...');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) {
+              debugPrint('🎵 Music player builder called');
+              return const music.AudioApp();
+            },
+          ),
+        ).then((value) {
+          debugPrint('✅ Music player route completed/popped');
+        });
+        debugPrint('✅ Navigation push called');
+      } else {
+        debugPrint('⚠️ Context not mounted, skipping navigation');
+      }
     } catch (e) {
       EasyLoading.dismiss();
       debugPrint('Error getting song details: $e');

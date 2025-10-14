@@ -74,7 +74,8 @@ class AppStateProvider extends ChangeNotifier {
 
       // Simulate loading from persistent storage
       // In a real implementation, use SharedPreferences or secure storage
-      await Future.delayed(Duration(milliseconds: 100));
+      // Reduced delay to 10ms to minimize startup blocking
+      await Future.delayed(const Duration(milliseconds: 10));
 
       // Default preferences loaded
       debugPrint('✅ User preferences loaded');

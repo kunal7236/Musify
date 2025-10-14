@@ -34,40 +34,42 @@ class BottomPlayer extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(top: 5.0, bottom: 2),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RepaintBoundary(
-                              child: const music.AudioApp(),
+                    child: Row(
+                      children: <Widget>[
+                        // Up arrow button - opens music player
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: IconButton(
+                            icon: Icon(
+                              MdiIcons.appleKeyboardControl,
+                              size: 22,
                             ),
-                          ),
-                        );
-                      },
-                      child: Row(
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: IconButton(
-                              icon: Icon(
-                                MdiIcons.appleKeyboardControl,
-                                size: 22,
-                              ),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => RepaintBoundary(
-                                      child: const music.AudioApp(),
-                                    ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RepaintBoundary(
+                                    child: const music.AudioApp(),
                                   ),
-                                );
-                              },
-                              disabledColor: AppColors.accent,
-                            ),
+                                ),
+                              );
+                            },
+                            disabledColor: AppColors.accent,
                           ),
-                          Container(
+                        ),
+                        // Album art - also opens music player when tapped
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RepaintBoundary(
+                                  child: const music.AudioApp(),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
                             width: 60,
                             height: 60,
                             padding: const EdgeInsets.only(
@@ -82,7 +84,20 @@ class BottomPlayer extends StatelessWidget {
                               height: 60,
                             ),
                           ),
-                          Expanded(
+                        ),
+                        // Song title and artist - tappable to open player
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RepaintBoundary(
+                                    child: const music.AudioApp(),
+                                  ),
+                                ),
+                              );
+                            },
                             child: Padding(
                               padding: const EdgeInsets.only(
                                 top: 0.0,
@@ -117,52 +132,70 @@ class BottomPlayer extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Consumer<MusicPlayerProvider>(
-                            builder: (context, musicPlayer, child) {
-                              return IconButton(
-                                icon: musicPlayer.playbackState ==
-                                        PlaybackState.playing
-                                    ? Icon(MdiIcons.pause)
-                                    : Icon(MdiIcons.playOutline),
-                                color: AppColors.accent,
-                                splashColor: Colors.transparent,
-                                onPressed: () async {
-                                  try {
-                                    if (musicPlayer.playbackState ==
-                                        PlaybackState.playing) {
-                                      await musicPlayer.pause();
-                                    } else if (musicPlayer.playbackState ==
-                                        PlaybackState.paused) {
-                                      await musicPlayer.resume();
-                                    } else if (musicPlayer.currentSong !=
-                                        null) {
-                                      await musicPlayer
-                                          .playSong(musicPlayer.currentSong!);
-                                    } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text('No song selected'),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    debugPrint('? Audio control error: $e');
+                        ),
+                        // Play/Pause button - DOES NOT open music player
+                        Consumer<MusicPlayerProvider>(
+                          builder: (context, musicPlayer, child) {
+                            // Show loading indicator while song is loading
+                            if (musicPlayer.playbackState ==
+                                PlaybackState.loading) {
+                              return Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  width: 21,
+                                  height: 21,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // Show play/pause button based on playback state
+                            return IconButton(
+                              icon: musicPlayer.playbackState ==
+                                      PlaybackState.playing
+                                  ? Icon(MdiIcons.pause)
+                                  : Icon(MdiIcons.playOutline),
+                              color: AppColors.accent,
+                              splashColor: Colors.transparent,
+                              onPressed: () async {
+                                try {
+                                  if (musicPlayer.playbackState ==
+                                      PlaybackState.playing) {
+                                    await musicPlayer.pause();
+                                  } else if (musicPlayer.playbackState ==
+                                      PlaybackState.paused) {
+                                    await musicPlayer.resume();
+                                  } else if (musicPlayer.currentSong != null) {
+                                    await musicPlayer
+                                        .playSong(musicPlayer.currentSong!);
+                                  } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: Text('Audio error: $e'),
-                                        backgroundColor: Colors.red,
+                                        content: Text('No song selected'),
+                                        backgroundColor: Colors.orange,
                                       ),
                                     );
                                   }
-                                },
-                                iconSize: 45,
-                              );
-                            },
-                          )
-                        ],
-                      ),
+                                } catch (e) {
+                                  debugPrint('❌ Audio control error: $e');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Audio error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              iconSize: 45,
+                            );
+                          },
+                        )
+                      ],
                     ),
                   ),
                 ),

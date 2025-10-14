@@ -37,9 +37,11 @@ class SearchProvider extends ChangeNotifier {
 
   /// Constructor
   SearchProvider() {
-    // Schedule top songs loading after the provider is fully initialized
-    // This prevents blocking the main thread during app startup
-    Future.microtask(() => _loadTopSongs());
+    // Delay top songs loading to avoid blocking UI during app startup
+    // Use a longer delay to let the UI render first
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _loadTopSongs();
+    });
   }
 
   // Public getters

@@ -25,6 +25,9 @@ class MusicPlayerProvider extends ChangeNotifier {
   StreamSubscription<Duration>? _durationSubscription;
   StreamSubscription<String>? _errorSubscription;
 
+  // Throttling for position updates to reduce UI redraws
+  DateTime _lastPositionUpdate = DateTime.now();
+
   /// Constructor
   MusicPlayerProvider() {
     _audioService = AudioPlayerService();
@@ -101,7 +104,13 @@ class MusicPlayerProvider extends ChangeNotifier {
     _positionSubscription = _audioService.positionStream.listen(
       (Duration position) {
         _position = position;
-        notifyListeners();
+
+        // Throttle position updates to max once per 200ms to reduce UI redraws
+        final now = DateTime.now();
+        if (now.difference(_lastPositionUpdate).inMilliseconds >= 200) {
+          _lastPositionUpdate = now;
+          notifyListeners();
+        }
       },
       onError: (error) {
         debugPrint('❌ Position stream error: $error');
@@ -134,8 +143,9 @@ class MusicPlayerProvider extends ChangeNotifier {
     try {
       debugPrint('🎵 Playing song: ${song.title} by ${song.artist}');
 
-      // Update current song and clear error (but don't manually set loading state)
-      // Let the audio service stream handle state updates automatically
+      // Set loading state temporarily until audio handler starts
+      // This provides immediate UI feedback
+      _playbackState = PlaybackState.loading;
       _currentSong = song;
       _clearError();
       notifyListeners();
@@ -160,6 +170,7 @@ class MusicPlayerProvider extends ChangeNotifier {
       }
 
       debugPrint('✅ Song playback started successfully');
+      // Note: The actual playing state will be set by the stream listener
     } catch (e) {
       debugPrint('❌ Failed to play song: $e');
       _playbackState = PlaybackState.error;
