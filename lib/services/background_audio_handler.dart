@@ -19,6 +19,10 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
 
+  // Callbacks for next/previous actions (to be set by MusicPlayerProvider)
+  VoidCallback? onSkipToNext;
+  VoidCallback? onSkipToPrevious;
+
   /// Constructor
   MusifyAudioHandler() {
     _init();
@@ -232,14 +236,22 @@ class MusifyAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-    debugPrint('⏭️ Skip to next (not implemented yet)');
-    // TODO: Implement playlist functionality
+    debugPrint('⏭️ Skip to next from notification');
+    if (onSkipToNext != null) {
+      onSkipToNext!();
+    } else {
+      debugPrint('⚠️ onSkipToNext callback not set');
+    }
   }
 
   @override
   Future<void> skipToPrevious() async {
-    debugPrint('⏮️ Skip to previous (not implemented yet)');
-    // TODO: Implement playlist functionality
+    debugPrint('⏮️ Skip to previous from notification');
+    if (onSkipToPrevious != null) {
+      onSkipToPrevious!();
+    } else {
+      debugPrint('⚠️ onSkipToPrevious callback not set');
+    }
   }
 
   @override

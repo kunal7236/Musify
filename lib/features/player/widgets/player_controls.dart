@@ -11,6 +11,10 @@ class PlayerControls extends StatelessWidget {
   final bool isPaused;
   final VoidCallback? onPlay;
   final VoidCallback? onPause;
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
+  final bool hasNext;
+  final bool hasPrevious;
   final double iconSize;
   final Color? iconColor;
   final Gradient? gradient;
@@ -21,6 +25,10 @@ class PlayerControls extends StatelessWidget {
     required this.isPaused,
     this.onPlay,
     this.onPause,
+    this.onNext,
+    this.onPrevious,
+    this.hasNext = false,
+    this.hasPrevious = false,
     this.iconSize = AppConstants.playerControlSize,
     this.iconColor,
     this.gradient,
@@ -30,9 +38,43 @@ class PlayerControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Previous button
+        if (onPrevious != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: IconButton(
+              iconSize: iconSize * 0.7,
+              icon: Icon(
+                MdiIcons.skipPrevious,
+                color: hasPrevious
+                    ? AppColors.accent
+                    : AppColors.textSecondary.withOpacity(0.5),
+              ),
+              onPressed: hasPrevious ? onPrevious : null,
+            ),
+          ),
+
+        // Play/Pause button
         if (!isPlaying) _buildPlayButton(),
         if (isPlaying) _buildPauseButton(),
+
+        // Next button
+        if (onNext != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: IconButton(
+              iconSize: iconSize * 0.7,
+              icon: Icon(
+                MdiIcons.skipNext,
+                color: hasNext
+                    ? AppColors.accent
+                    : AppColors.textSecondary.withOpacity(0.5),
+              ),
+              onPressed: hasNext ? onNext : null,
+            ),
+          ),
       ],
     );
   }

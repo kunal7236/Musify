@@ -277,6 +277,18 @@ class AudioPlayerService {
     }
   }
 
+  /// Set callback for skip to next action from notification
+  void setOnSkipToNext(VoidCallback callback) {
+    audioHandler.onSkipToNext = callback;
+    debugPrint('✅ Skip to next callback registered');
+  }
+
+  /// Set callback for skip to previous action from notification
+  void setOnSkipToPrevious(VoidCallback callback) {
+    audioHandler.onSkipToPrevious = callback;
+    debugPrint('✅ Skip to previous callback registered');
+  }
+
   /// Handle errors and emit them to UI
   void _handleError(String error) {
     debugPrint('🚨 AudioPlayerService error: $error');

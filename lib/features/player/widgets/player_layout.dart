@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gradient_widgets_plus/gradient_widgets_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 
 import 'package:Musify/providers/music_player_provider.dart';
 import 'package:Musify/providers/app_state_provider.dart';
@@ -110,15 +111,64 @@ class MusicPlayerLayout extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Progress Slider
-          if (musicPlayer.duration.inMilliseconds > 0)
-            PlayerProgressBar(
-              position: musicPlayer.position,
-              duration: musicPlayer.duration,
-              onChanged: (double value) {
-                musicPlayer.seek(Duration(milliseconds: value.round()));
-              },
+          // Loop/Repeat Button (above slider)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  child: IconButton(
+                    icon: Icon(
+                      musicPlayer.isLoopEnabled
+                          ? MdiIcons.repeat
+                          : MdiIcons.repeatOff,
+                    ),
+                    color: musicPlayer.isLoopEnabled
+                        ? AppColors.accent
+                        : Colors.white54,
+                    iconSize: 24,
+                    onPressed: () {
+                      musicPlayer.toggleLoop();
+                      // Show a snackbar for feedback
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            musicPlayer.isLoopEnabled
+                                ? '🔁 Loop ON - Current song will repeat'
+                                : '⏭️ Loop OFF - Will play next song',
+                          ),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    tooltip: musicPlayer.isLoopEnabled
+                        ? 'Loop: ON (Repeat current song)'
+                        : 'Loop: OFF (Play next song)',
+                  ),
+                ),
+              ],
             ),
+          ),
+
+          // Progress Slider with loading state
+          AnimatedOpacity(
+            opacity: musicPlayer.duration.inMilliseconds > 0 ? 1.0 : 0.5,
+            duration: const Duration(milliseconds: 300),
+            child: PlayerProgressBar(
+              position: musicPlayer.position,
+              duration: musicPlayer.duration.inMilliseconds > 0
+                  ? musicPlayer.duration
+                  : const Duration(milliseconds: 1), // Prevent division by zero
+              onChanged: musicPlayer.duration.inMilliseconds > 0
+                  ? (double value) {
+                      musicPlayer.seek(Duration(milliseconds: value.round()));
+                    }
+                  : null, // Disable interaction when duration is not loaded
+            ),
+          ),
 
           // Play/Pause Button and Lyrics
           Padding(
@@ -131,6 +181,8 @@ class MusicPlayerLayout extends StatelessWidget {
                     PlayerControls(
                       isPlaying: musicPlayer.isPlaying,
                       isPaused: musicPlayer.isPaused,
+                      hasNext: musicPlayer.hasNextSong,
+                      hasPrevious: musicPlayer.hasPreviousSong,
                       onPlay: () {
                         if (musicPlayer.isPaused) {
                           musicPlayer.resume();
@@ -141,6 +193,8 @@ class MusicPlayerLayout extends StatelessWidget {
                         }
                       },
                       onPause: () => musicPlayer.pause(),
+                      onNext: () => musicPlayer.playNext(),
+                      onPrevious: () => musicPlayer.playPrevious(),
                       iconSize: 40.0,
                     ),
                   ],

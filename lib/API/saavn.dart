@@ -14,6 +14,7 @@ String kUrl = "",
     lyrics = "",
     has_lyrics = "",
     has_320 = "",
+    albumId = "",
     rawkUrl = "";
 
 // API Endpoints (exactly as in your Python endpoints.py)
@@ -138,6 +139,7 @@ Future<bool> fetchSongDetails(String songId) async {
     title = formatString(songData["song"] ?? "");
     album = formatString(songData["album"] ?? "");
     artist = formatString(songData["singers"] ?? "");
+    albumId = songData["albumid"] ?? "";
     has_lyrics = songData["has_lyrics"] ?? "false";
     image =
         (songData["image"] ?? "").toString().replaceAll("150x150", "500x500");
@@ -146,6 +148,7 @@ Future<bool> fetchSongDetails(String songId) async {
     debugPrint('🎼 Song: $title');
     debugPrint('🎤 Artist: $artist');
     debugPrint('💿 Album: $album');
+    debugPrint('💿 Album ID: $albumId');
     debugPrint('🔊 320kbps: $has_320');
     debugPrint('🔊 has lyrics: $has_lyrics');
 
@@ -159,7 +162,7 @@ Future<bool> fetchSongDetails(String songId) async {
       }
       dynamic lyricsResponse = json.decode(resLyrics.body);
       lyrics = lyricsResponse["lyrics"];
-      lyrics=lyrics.replaceAll("<br>", "\n");
+      lyrics = lyrics.replaceAll("<br>", "\n");
     }
 
     // Debug: Print all available fields in songData
@@ -392,5 +395,68 @@ bool isVpnConnected() {
     return kUrl.contains('150x150');
   } else {
     return false;
+  }
+}
+
+// Get album details (for fetching album song IDs)
+// Returns minimal info - just song IDs and basic metadata
+// Actual song details (including playback URLs) will be fetched on-demand
+Future<List<Map<String, dynamic>>> fetchAlbumDetails(String albumId) async {
+  try {
+    debugPrint('💿 Fetching album details for ID: $albumId');
+
+    String albumUrl = albumDetailsBaseUrl + albumId;
+    debugPrint('📡 Album API URL: $albumUrl');
+
+    var response = await http.get(Uri.parse(albumUrl));
+
+    if (response.statusCode != 200) {
+      debugPrint('❌ Album API failed with status: ${response.statusCode}');
+      return [];
+    }
+
+    // Handle response format
+    String responseBody = response.body;
+    if (responseBody.contains("-->")) {
+      var resEdited = responseBody.split("-->");
+      if (resEdited.length < 2) {
+        debugPrint('❌ Invalid album API response format');
+        return [];
+      }
+      responseBody = resEdited[1];
+    }
+
+    // Parse JSON
+    dynamic albumResponse = json.decode(responseBody);
+
+    // Check if songs array exists
+    if (albumResponse == null || albumResponse['songs'] == null) {
+      debugPrint('❌ No songs found in album');
+      return [];
+    }
+
+    List albumSongs = albumResponse['songs'];
+    List<Map<String, dynamic>> songIds = [];
+
+    debugPrint('💿 Album: ${albumResponse['title'] ?? 'Unknown'}');
+    debugPrint('💿 Found ${albumSongs.length} songs in album');
+
+    // Extract just the song IDs and basic info
+    // Don't filter anything - let the actual fetchSongDetails handle DRM/availability
+    for (var song in albumSongs) {
+      songIds.add({
+        'id': song['id'] ?? '',
+        'title': formatString(song['song'] ?? ''),
+        'artist': formatString(song['singers'] ?? ''),
+        'image':
+            (song['image'] ?? '').toString().replaceAll('150x150', '500x500'),
+      });
+    }
+
+    debugPrint('✅ Extracted ${songIds.length} song IDs from album');
+    return songIds;
+  } catch (e) {
+    debugPrint('❌ fetchAlbumDetails failed: $e');
+    return [];
   }
 }

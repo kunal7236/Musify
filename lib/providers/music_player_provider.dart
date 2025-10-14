@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:Musify/models/app_models.dart';
 import 'package:Musify/services/audio_player_service.dart';
+import 'package:Musify/API/saavn.dart' as saavn_api;
 
 /// MusicPlayerProvider following industry standards for state management
 /// Manages audio playback state, current song, and player controls
@@ -18,6 +19,16 @@ class MusicPlayerProvider extends ChangeNotifier {
   bool _isInitialized = false;
   double _volume = 1.0;
   bool _isMuted = false;
+  bool _isLoopEnabled = false; // Loop/repeat mode
+
+  // Track last processing state for completion detection
+  ProcessingState _lastProcessingState = ProcessingState.idle;
+
+  // Album queue management
+  List<Map<String, dynamic>> _albumQueue = [];
+  int _currentSongIndexInAlbum = -1;
+  String _currentAlbumId = '';
+  bool _isLoadingAlbumQueue = false;
 
   // Stream subscriptions for cleanup
   StreamSubscription<PlayerState>? _stateSubscription;
@@ -44,6 +55,12 @@ class MusicPlayerProvider extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   double get volume => _volume;
   bool get isMuted => _isMuted;
+  bool get isLoopEnabled => _isLoopEnabled;
+  bool get hasNextSong =>
+      _currentSongIndexInAlbum >= 0 &&
+      _currentSongIndexInAlbum < _albumQueue.length - 1;
+  bool get hasPreviousSong => _currentSongIndexInAlbum > 0;
+  bool get isLoadingAlbumQueue => _isLoadingAlbumQueue;
 
   // Computed properties
   bool get isPlaying => _playbackState == PlaybackState.playing;
@@ -72,6 +89,16 @@ class MusicPlayerProvider extends ChangeNotifier {
       // Set up stream listeners
       _setupStreamListeners();
 
+      // Register notification callbacks for next/previous
+      _audioService.setOnSkipToNext(() {
+        debugPrint('⏭️ Next triggered from notification');
+        playNext();
+      });
+      _audioService.setOnSkipToPrevious(() {
+        debugPrint('⏮️ Previous triggered from notification');
+        playPrevious();
+      });
+
       // Update initial state
       _playbackState = _mapPlayerState(_audioService.playerState);
       _position = _audioService.position;
@@ -91,8 +118,69 @@ class MusicPlayerProvider extends ChangeNotifier {
   void _setupStreamListeners() {
     _stateSubscription = _audioService.stateStream.listen(
       (PlayerState state) {
+        final oldProcessingState = _lastProcessingState;
         _playbackState = _mapPlayerState(state);
+        _lastProcessingState =
+            state.processingState; // Update last processing state
         _clearError(); // Clear error on successful state change
+
+        // Handle song completion based on loop mode
+        // Check if processingState changed to completed (regardless of playing state)
+        if (oldProcessingState != ProcessingState.completed &&
+            state.processingState == ProcessingState.completed) {
+          // Log the current state for debugging
+          debugPrint('🎵 === SONG COMPLETED ===');
+          debugPrint('   Old Processing State: $oldProcessingState');
+          debugPrint('   New Processing State: ${state.processingState}');
+          debugPrint('   Loop Enabled: $_isLoopEnabled');
+          debugPrint('   Has Next Song: $hasNextSong');
+          debugPrint('   Current Song: ${_currentSong?.title}');
+          debugPrint('   Playing: ${state.playing}');
+
+          if (_isLoopEnabled) {
+            // Loop mode: Restart the current song
+            debugPrint('🔁 Loop mode ON - Restarting current song...');
+            Future.delayed(const Duration(milliseconds: 400), () async {
+              if (_currentSong != null) {
+                debugPrint('🔁 Replaying: ${_currentSong!.title}');
+                try {
+                  // For just_audio, after completion we need to seek then play (not resume)
+                  final seekSuccess = await _audioService.seek(Duration.zero);
+                  debugPrint('   Seek to start: ${seekSuccess ? "✅" : "❌"}');
+
+                  // Small delay to let seek complete
+                  await Future.delayed(const Duration(milliseconds: 100));
+
+                  final playSuccess = await _audioService.resume();
+                  debugPrint('   Resume playback: ${playSuccess ? "✅" : "❌"}');
+
+                  if (seekSuccess && playSuccess) {
+                    debugPrint('✅ Loop playback started successfully');
+                  } else {
+                    debugPrint('❌ Loop playback failed - trying full replay');
+                    // Fallback: replay the entire song if seek+resume fails
+                    await playSong(_currentSong!);
+                  }
+                } catch (e) {
+                  debugPrint('❌ Loop playback error: $e');
+                  // Fallback: replay the entire song
+                  await playSong(_currentSong!);
+                }
+              } else {
+                debugPrint('❌ Cannot loop - no current song');
+              }
+            });
+          } else if (hasNextSong) {
+            // Normal mode: Play next song in album
+            debugPrint('⏭️ Loop mode OFF - Playing next song in album...');
+            Future.delayed(const Duration(milliseconds: 500), () {
+              playNext();
+            });
+          } else {
+            debugPrint('⏹️ Song completed - No loop, no next song available');
+          }
+        }
+
         notifyListeners();
       },
       onError: (error) {
@@ -170,11 +258,134 @@ class MusicPlayerProvider extends ChangeNotifier {
       }
 
       debugPrint('✅ Song playback started successfully');
+
+      // Load album queue in background if album ID is available
+      if (song.albumId.isNotEmpty) {
+        _loadAlbumQueueInBackground(song.albumId, song.id);
+      }
+
       // Note: The actual playing state will be set by the stream listener
     } catch (e) {
       debugPrint('❌ Failed to play song: $e');
       _playbackState = PlaybackState.error;
       _setError(AppError.audio('Failed to play ${song.title}', e.toString()));
+    }
+  }
+
+  /// Load album queue in background
+  Future<void> _loadAlbumQueueInBackground(
+      String albumId, String currentSongId) async {
+    // Don't reload if we already have this album
+    if (_currentAlbumId == albumId && _albumQueue.isNotEmpty) {
+      debugPrint('💿 Album queue already loaded for: $albumId');
+      // Just update current song index
+      _updateCurrentSongIndex(currentSongId);
+      return;
+    }
+
+    try {
+      _isLoadingAlbumQueue = true;
+      _currentAlbumId = albumId;
+      notifyListeners();
+
+      debugPrint('💿 Loading album queue for: $albumId');
+      _albumQueue = await saavn_api.fetchAlbumDetails(albumId);
+
+      if (_albumQueue.isNotEmpty) {
+        debugPrint('✅ Loaded ${_albumQueue.length} songs from album');
+        _updateCurrentSongIndex(currentSongId);
+      } else {
+        debugPrint('⚠️ No songs found in album');
+        _currentSongIndexInAlbum = -1;
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to load album queue: $e');
+      _albumQueue = [];
+      _currentSongIndexInAlbum = -1;
+    } finally {
+      _isLoadingAlbumQueue = false;
+      notifyListeners();
+    }
+  }
+
+  /// Update current song index in album queue
+  void _updateCurrentSongIndex(String songId) {
+    _currentSongIndexInAlbum =
+        _albumQueue.indexWhere((song) => song['id'] == songId);
+    if (_currentSongIndexInAlbum >= 0) {
+      debugPrint(
+          '📍 Current song index in album: $_currentSongIndexInAlbum/${_albumQueue.length}');
+    }
+  }
+
+  /// Play next song in album
+  Future<void> playNext() async {
+    if (!hasNextSong) {
+      debugPrint('⚠️ No next song available');
+      return;
+    }
+
+    try {
+      final nextIndex = _currentSongIndexInAlbum + 1;
+      final nextSongData = _albumQueue[nextIndex];
+
+      debugPrint('⏭️ Playing next song: ${nextSongData['title']}');
+
+      // Fetch full song details
+      final searchProvider = await _getSongFromId(nextSongData['id']);
+      if (searchProvider != null) {
+        await playSong(searchProvider);
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to play next song: $e');
+      _setError(AppError.audio('Failed to play next song', e.toString()));
+    }
+  }
+
+  /// Play previous song in album
+  Future<void> playPrevious() async {
+    if (!hasPreviousSong) {
+      debugPrint('⚠️ No previous song available');
+      return;
+    }
+
+    try {
+      final previousIndex = _currentSongIndexInAlbum - 1;
+      final previousSongData = _albumQueue[previousIndex];
+
+      debugPrint('⏮️ Playing previous song: ${previousSongData['title']}');
+
+      // Fetch full song details
+      final song = await _getSongFromId(previousSongData['id']);
+      if (song != null) {
+        await playSong(song);
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to play previous song: $e');
+      _setError(AppError.audio('Failed to play previous song', e.toString()));
+    }
+  }
+
+  /// Helper method to get full song details from ID
+  Future<Song?> _getSongFromId(String songId) async {
+    try {
+      final success = await saavn_api.fetchSongDetails(songId);
+      if (success) {
+        return Song(
+          id: songId,
+          title: saavn_api.title,
+          artist: saavn_api.artist,
+          album: saavn_api.album,
+          imageUrl: saavn_api.image,
+          audioUrl: saavn_api.kUrl,
+          albumId: saavn_api.albumId,
+          duration: Duration.zero,
+        );
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Failed to get song details: $e');
+      return null;
     }
   }
 
@@ -263,6 +474,17 @@ class MusicPlayerProvider extends ChangeNotifier {
     } else {
       await setVolume(0.0);
     }
+  }
+
+  /// Toggle loop/repeat mode
+  void toggleLoop() {
+    _isLoopEnabled = !_isLoopEnabled;
+    debugPrint('🔁 ========================');
+    debugPrint('🔁 Loop button toggled!');
+    debugPrint('🔁 New state: ${_isLoopEnabled ? 'ON ✅' : 'OFF ❌'}');
+    debugPrint('🔁 Current song: ${_currentSong?.title ?? 'None'}');
+    debugPrint('🔁 ========================');
+    notifyListeners();
   }
 
   /// Clear current song

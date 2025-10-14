@@ -183,6 +183,7 @@ class SearchProvider extends ChangeNotifier {
       // until we fully refactor the API layer
       Song updatedSong = song.copyWith(
         audioUrl: saavn_api.kUrl,
+        albumId: saavn_api.albumId,
         lyrics: saavn_api.lyrics,
         hasLyrics: saavn_api.has_lyrics == 'true',
         has320Quality: saavn_api.has_320 == 'true',

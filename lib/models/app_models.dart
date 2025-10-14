@@ -10,6 +10,7 @@ class Song {
   final String album;
   final String imageUrl;
   final String audioUrl;
+  final String albumId;
   final bool hasLyrics;
   final String lyrics;
   final bool has320Quality;
@@ -22,6 +23,7 @@ class Song {
     required this.album,
     required this.imageUrl,
     required this.audioUrl,
+    this.albumId = '',
     this.hasLyrics = false,
     this.lyrics = '',
     this.has320Quality = false,
@@ -85,6 +87,7 @@ class Song {
     String? album,
     String? imageUrl,
     String? audioUrl,
+    String? albumId,
     bool? hasLyrics,
     String? lyrics,
     bool? has320Quality,
@@ -97,6 +100,7 @@ class Song {
       album: album ?? this.album,
       imageUrl: imageUrl ?? this.imageUrl,
       audioUrl: audioUrl ?? this.audioUrl,
+      albumId: albumId ?? this.albumId,
       hasLyrics: hasLyrics ?? this.hasLyrics,
       lyrics: lyrics ?? this.lyrics,
       has320Quality: has320Quality ?? this.has320Quality,
