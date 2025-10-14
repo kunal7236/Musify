@@ -65,11 +65,12 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
             
-            // Enable code shrinking, obfuscation, and optimization
-            minifyEnabled true
-            shrinkResources true
+            // Disable minification - audio_service notifications don't work with R8/ProGuard
+            // This ensures background playback and lock screen controls work properly
+            minifyEnabled false
+            shrinkResources false
             
-            // Use the default ProGuard rules files
+            // ProGuard rules kept for future reference if needed
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

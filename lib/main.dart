@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:Musify/ui/homePage.dart';
 import 'package:Musify/services/audio_player_service.dart';
@@ -13,8 +14,30 @@ import 'package:Musify/providers/app_state_provider.dart';
 // Global audio handler instance
 late MusifyAudioHandler audioHandler;
 
+/// Request notification permission for Android 13+ (API 33+)
+/// This is required for notifications and lock screen controls to work
+Future<void> _requestNotificationPermission() async {
+  debugPrint('🔔 Requesting notification permission...');
+  try {
+    final status = await Permission.notification.request();
+    if (status.isGranted) {
+      debugPrint('✅ Notification permission granted');
+    } else if (status.isDenied) {
+      debugPrint('⚠️ Notification permission denied');
+    } else if (status.isPermanentlyDenied) {
+      debugPrint('❌ Notification permission permanently denied');
+      debugPrint('💡 User needs to enable it in Settings');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Error requesting notification permission: $e');
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Request notification permission for Android 13+ (required for lock screen controls)
+  await _requestNotificationPermission();
 
   // Initialize audio_service with custom handler
   debugPrint('🎵 Initializing audio_service...');
@@ -25,12 +48,13 @@ void main() async {
         androidNotificationChannelId: 'com.gokadzev.musify.channel.audio',
         androidNotificationChannelName: 'Musify Audio',
         androidNotificationChannelDescription: 'Music playback controls',
-        androidStopForegroundOnPause:
-            false, // Don't stop service when paused - allows background playback
+        androidStopForegroundOnPause: false, // Keep notification when paused
         androidNotificationIcon: 'mipmap/ic_launcher',
+        androidShowNotificationBadge: true,
       ),
     );
     debugPrint('✅ audio_service initialized successfully');
+    debugPrint('✅ Notification channel: com.gokadzev.musify.channel.audio');
   } catch (e) {
     debugPrint('⚠️ Failed to initialize audio_service: $e');
     debugPrint('⚠️ Background playback will not be available');
