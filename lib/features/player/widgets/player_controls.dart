@@ -50,7 +50,7 @@ class PlayerControls extends StatelessWidget {
                 MdiIcons.skipPrevious,
                 color: hasPrevious
                     ? AppColors.accent
-                    : AppColors.textSecondary.withOpacity(0.5),
+                    : AppColors.textSecondary.withValues(alpha: 0.5),
               ),
               onPressed: hasPrevious ? onPrevious : null,
             ),
@@ -70,7 +70,7 @@ class PlayerControls extends StatelessWidget {
                 MdiIcons.skipNext,
                 color: hasNext
                     ? AppColors.accent
-                    : AppColors.textSecondary.withOpacity(0.5),
+                    : AppColors.textSecondary.withValues(alpha: 0.5),
               ),
               onPressed: hasNext ? onNext : null,
             ),

@@ -6,8 +6,6 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:Musify/providers/music_player_provider.dart';
 import 'package:Musify/providers/app_state_provider.dart';
 import 'package:Musify/core/constants/app_colors.dart';
-import 'package:Musify/features/player/widgets/album_art_widget.dart';
-import 'package:Musify/features/player/widgets/lyrics_modal.dart';
 import 'package:Musify/features/player/player.dart';
 
 class MusicPlayerLayout extends StatelessWidget {
