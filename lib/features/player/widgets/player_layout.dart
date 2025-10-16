@@ -71,58 +71,66 @@ class MusicPlayerLayout extends StatelessWidget {
               ),
             ),
             body: SafeArea(
+              bottom: true, // Ensure bottom safe area is respected
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   // Calculate responsive spacing
                   final availableHeight = constraints.maxHeight;
-                  final topSpacing = isSmallScreen ? 10.0 : 35.0;
+                  final topSpacing =
+                      isSmallScreen ? 5.0 : 20.0; // Reduced for small screens
 
                   return SingleChildScrollView(
-                    // Enable scrolling on very small screens
-                    physics: isSmallScreen
-                        ? const ClampingScrollPhysics()
-                        : const NeverScrollableScrollPhysics(),
+                    // Always enable scrolling to prevent content from being cut off
+                    physics: const ClampingScrollPhysics(),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         minHeight: availableHeight,
                       ),
-                      child: Column(
-                        children: [
-                          SizedBox(height: topSpacing),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          children: [
+                            SizedBox(height: topSpacing),
 
-                          // Album Art with responsive size
-                          Center(
-                            child: MusicPlayerAlbumArt(
-                              imageUrl: songInfo['imageUrl']!,
+                            // Album Art with responsive size
+                            Center(
+                              child: MusicPlayerAlbumArt(
+                                imageUrl: songInfo['imageUrl']!,
+                              ),
                             ),
-                          ),
 
-                          // Song Info
-                          MusicPlayerSongInfo(
-                            title: songInfo['title']!,
-                            artist: songInfo['artist']!,
-                            album: songInfo['album']!,
-                          ),
-
-                          // Responsive spacing instead of Spacer
-                          SizedBox(
-                            height: isSmallScreen
-                                ? 20.0
-                                : (availableHeight * 0.05).clamp(20.0, 50.0),
-                          ),
-
-                          // Player Controls
-                          Material(
-                            child: _buildPlayer(
-                              context,
-                              musicPlayer,
-                              appState,
-                              screenHeight,
-                              screenWidth,
-                              isSmallScreen,
+                            // Song Info
+                            MusicPlayerSongInfo(
+                              title: songInfo['title']!,
+                              artist: songInfo['artist']!,
+                              album: songInfo['album']!,
                             ),
-                          ),
-                        ],
+
+                            // Flexible spacing that adapts
+                            Expanded(
+                              child: SizedBox(
+                                height: isSmallScreen ? 10.0 : 20.0,
+                              ),
+                            ),
+
+                            // Player Controls
+                            // Player Controls
+                            Material(
+                              child: _buildPlayer(
+                                context,
+                                musicPlayer,
+                                appState,
+                                screenHeight,
+                                screenWidth,
+                                isSmallScreen,
+                              ),
+                            ),
+
+                            // Extra bottom padding to ensure visibility on all devices
+                            SizedBox(
+                                height:
+                                    MediaQuery.of(context).padding.bottom + 16),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -145,16 +153,18 @@ class MusicPlayerLayout extends StatelessWidget {
   ) {
     // Responsive padding and spacing
     final horizontalPadding = screenWidth * 0.04; // 4% of screen width
-    final verticalPadding = isSmallScreen ? 8.0 : 16.0;
-    final controlSpacing = isSmallScreen ? 12.0 : 18.0;
-    final lyricsButtonTopPadding = isSmallScreen ? 16.0 : 40.0;
+    final verticalPadding = isSmallScreen ? 4.0 : 12.0; // Reduced padding
+    final controlSpacing = isSmallScreen ? 8.0 : 14.0; // Reduced spacing
+    final lyricsButtonTopPadding =
+        isSmallScreen ? 12.0 : 30.0; // Reduced spacing
 
     return Container(
       padding: EdgeInsets.only(
-        top: 15.0,
+        top: 10.0, // Reduced from 15.0
         left: horizontalPadding,
         right: horizontalPadding,
-        bottom: verticalPadding,
+        bottom:
+            verticalPadding, // Removed extra bottom padding since we added it to Column
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
