@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:audiotags/audiotags.dart';
 
 import 'package:Musify/API/saavn.dart' as saavn;
+import 'package:Musify/core/constants/app_colors.dart';
 
 class DownloadService {
   static Future<void> downloadSong(String id) async {
@@ -56,8 +57,8 @@ class DownloadService {
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 3,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: AppColors.backgroundModal,
+          textColor: AppColors.textPrimary,
           fontSize: 14.0);
       return;
     }
@@ -132,12 +133,12 @@ class DownloadService {
       if (fileExists) {
         EasyLoading.dismiss();
         Fluttertoast.showToast(
-            msg: "${saavn.title} already downloaded!",
+            msg: "✓ ${saavn.title} already downloaded!",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
+            backgroundColor: AppColors.backgroundModal,
+            textColor: AppColors.accent,
             fontSize: 14.0);
         return;
       }
@@ -194,23 +195,23 @@ class DownloadService {
       EasyLoading.dismiss();
       Fluttertoast.showToast(
           msg:
-              "${saavn.title} downloaded successfully!\nSaved in: $locationDescription",
+              "✓ ${saavn.title} downloaded successfully!\nSaved in: $locationDescription",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 3,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
+          backgroundColor: AppColors.backgroundModal,
+          textColor: AppColors.accent,
           fontSize: 14.0);
     } catch (e) {
       EasyLoading.dismiss();
       debugPrint('✗ Download error: $e');
       Fluttertoast.showToast(
-          msg: "Download failed: $e",
+          msg: "✗ Download failed: $e",
           toastLength: Toast.LENGTH_LONG,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 3,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
+          backgroundColor: AppColors.backgroundModal,
+          textColor: AppColors.error,
           fontSize: 14.0);
     }
   }
