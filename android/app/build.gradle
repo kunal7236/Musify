@@ -59,6 +59,16 @@ android {
         versionName flutterVersionName
     }
 
+    // Enable APK splits by ABI to generate separate APKs for different architectures
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            universalApk true  // Generate universal APK as well
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.

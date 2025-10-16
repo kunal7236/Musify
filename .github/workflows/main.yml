@@ -17,18 +17,36 @@ jobs:
         flutter-version: '3.35.6'
         channel: 'stable'
     - run: flutter pub get
-    - run: flutter build apk --release
-    - name: Upload APK Artifact
+    - run: flutter build apk --release --split-per-abi
+    - name: Upload Universal APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-release-apk
+        name: app-universal-release
         path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 720
+    - name: Upload ARM64 APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-arm64-v8a-release
+        path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+        retention-days: 720
+    - name: Upload ARMv7 APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-armeabi-v7a-release
+        path: build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+        retention-days: 720
+    - name: Upload x86_64 APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-x86_64-release
+        path: build/app/outputs/flutter-apk/app-x86_64-release.apk
         retention-days: 720
     - name: Create GitHub Release
       uses: ncipollo/release-action@v1
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       with:
-        artifacts: "build/app/outputs/flutter-apk/app-release.apk"
+        artifacts: "build/app/outputs/flutter-apk/*.apk"
         tag: v1.0.${{ github.run_number }}
         name: Release v1.0.${{ github.run_number }}
         body: |
@@ -37,16 +55,31 @@ jobs:
           **Commit:** ${{ github.event.head_commit.message }}
           
           ### Features:
-          -  Background playback with notifications
-          -  Lock screen controls
-          -  Album queue system
-          -  Loop/repeat functionality
-          -  Song download with permissions
-          -  Responsive UI for all screen sizes
-          -  Dart 3 Compatible
+          - 🎵 Background playback with notifications
+          - 🔒 Lock screen controls
+          - 📱 Album queue system
+          - 🔁 Loop/repeat functionality
+          - ⬇️ Song download with permissions
+          - 📐 Responsive UI for all screen sizes
+          - 🚀 Dart 3 Compatible
           
-          ### Download:
-          Download `app-release.apk` below and install on your Android device.
+          ### Available APKs:
+          
+          **📦 Universal APK** (`app-release.apk`) - ~65MB
+          - Works on all devices (recommended if unsure)
+          
+          **📱 ARM64 APK** (`app-arm64-v8a-release.apk`) - ~23MB
+          - For modern devices (2019+): Pixel, Samsung Galaxy S10+, OnePlus 7+, etc.
+          
+          **📱 ARMv7 APK** (`app-armeabi-v7a-release.apk`) - ~21MB
+          - For older devices: Samsung Galaxy S6-S9, older budget phones
+          
+          **💻 x86_64 APK** (`app-x86_64-release.apk`) - ~25MB
+          - For emulators and Intel-based devices
+          
+          ### How to choose:
+          - **Not sure?** → Download Universal APK
+          - **Want smaller size?** → Check your device's CPU architecture in Settings > About Phone
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
         makeLatest: true
