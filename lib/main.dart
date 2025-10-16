@@ -49,11 +49,12 @@ void main() async {
         androidNotificationChannelName: 'Musify Audio',
         androidNotificationChannelDescription: 'Music playback controls',
         androidStopForegroundOnPause: false, // Keep notification when paused
-        androidNotificationIcon: 'mipmap/ic_launcher',
+        androidNotificationIcon: 'drawable/ic_notification', // Custom notification icon
         androidShowNotificationBadge: true,
       ),
     );
     debugPrint('✅ audio_service initialized successfully');
+    debugPrint('✅ Notification icon: drawable/ic_notification');
     debugPrint('✅ Notification channel: com.gokadzev.musify.channel.audio');
   } catch (e) {
     debugPrint('⚠️ Failed to initialize audio_service: $e');
