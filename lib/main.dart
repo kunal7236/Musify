@@ -49,7 +49,8 @@ void main() async {
         androidNotificationChannelName: 'Musify Audio',
         androidNotificationChannelDescription: 'Music playback controls',
         androidStopForegroundOnPause: false, // Keep notification when paused
-        androidNotificationIcon: 'drawable/ic_notification', // Custom notification icon
+        androidNotificationIcon:
+            'drawable/ic_notification', // Custom notification icon
         androidShowNotificationBadge: true,
       ),
     );
